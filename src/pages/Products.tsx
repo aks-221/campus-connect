@@ -3,7 +3,9 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { mockProducts, categories } from "@/data/mockData";
+import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Products = () => {
   const [search, setSearch] = useState("");
@@ -12,38 +14,13 @@ const Products = () => {
   const [priceMax, setPriceMax] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    return mockProducts.filter((product) => {
-      // Masquer les produits épuisés
-      if (product.status === "epuise") return false;
-
-      // Filtre par recherche
-      if (
-        search &&
-        !product.name.toLowerCase().includes(search.toLowerCase()) &&
-        !product.description.toLowerCase().includes(search.toLowerCase())
-      ) {
-        return false;
-      }
-
-      // Filtre par catégorie
-      if (selectedCategory && product.category !== selectedCategory) {
-        return false;
-      }
-
-      // Filtre par prix min
-      if (priceMin && product.price < parseInt(priceMin)) {
-        return false;
-      }
-
-      // Filtre par prix max
-      if (priceMax && product.price > parseInt(priceMax)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [search, selectedCategory, priceMin, priceMax]);
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: products = [], isLoading: productsLoading } = useProducts({
+    categoryId: selectedCategory || undefined,
+    minPrice: priceMin ? parseInt(priceMin) : undefined,
+    maxPrice: priceMax ? parseInt(priceMax) : undefined,
+    search: search || undefined,
+  });
 
   const clearFilters = () => {
     setSearch("");
@@ -63,7 +40,7 @@ const Products = () => {
             Tous les produits
           </h1>
           <p className="text-muted-foreground mt-2">
-            {filteredProducts.length} produit{filteredProducts.length > 1 ? "s" : ""} disponible{filteredProducts.length > 1 ? "s" : ""}
+            {products.length} produit{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""}
           </p>
         </div>
 
@@ -120,8 +97,8 @@ const Products = () => {
                 >
                   <option value="">Toutes les catégories</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.name}>
-                      {cat.icon} {cat.name}
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>
@@ -173,22 +150,32 @@ const Products = () => {
           {categories.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.name)}
+              onClick={() => setSelectedCategory(cat.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === cat.name
+                selectedCategory === cat.id
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
             >
-              {cat.icon} {cat.name}
+              {cat.name}
             </button>
           ))}
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
+        {productsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map((product) => (
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="aspect-square rounded-2xl" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
