@@ -1,10 +1,28 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Product, CartItem } from "@/types";
+
+// Type simplifié pour le panier
+export interface CartProduct {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  stock: number;
+  vendorId: string;
+  vendorName: string;
+  vendorPhone: string;
+  vendorPavilion: string;
+  vendorRoom: string;
+}
+
+export interface CartItem {
+  product: CartProduct;
+  quantity: number;
+}
 
 interface CartContextType {
   items: CartItem[];
-  currentVendeurId: string | null;
-  addToCart: (product: Product) => boolean;
+  currentVendorId: string | null;
+  addToCart: (product: CartProduct) => boolean;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -16,15 +34,14 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [currentVendeurId, setCurrentVendeurId] = useState<string | null>(null);
+  const [currentVendorId, setCurrentVendorId] = useState<string | null>(null);
 
-  const addToCart = (product: Product): boolean => {
-    // Vérifier si le panier contient des produits d'un autre vendeur
-    if (currentVendeurId && currentVendeurId !== product.vendeurId) {
+  const addToCart = (product: CartProduct): boolean => {
+    if (currentVendorId && currentVendorId !== product.vendorId) {
       return false;
     }
 
-    setCurrentVendeurId(product.vendeurId);
+    setCurrentVendorId(product.vendorId);
     
     setItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.product.id === product.id);
@@ -44,7 +61,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setItems((prevItems) => {
       const newItems = prevItems.filter((item) => item.product.id !== productId);
       if (newItems.length === 0) {
-        setCurrentVendeurId(null);
+        setCurrentVendorId(null);
       }
       return newItems;
     });
@@ -66,7 +83,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => {
     setItems([]);
-    setCurrentVendeurId(null);
+    setCurrentVendorId(null);
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -79,7 +96,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     <CartContext.Provider
       value={{
         items,
-        currentVendeurId,
+        currentVendorId,
         addToCart,
         removeFromCart,
         updateQuantity,
