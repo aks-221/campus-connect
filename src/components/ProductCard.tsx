@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Heart, ShoppingCart, BadgeCheck } from "lucide-react";
 import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/contexts/CartContext";
+import { useCart, CartProduct } from "@/contexts/CartContext";
 import { toast } from "sonner";
 
 interface ProductCardProps {
@@ -21,7 +21,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
     
-    const success = addToCart(product);
+    // Convert Product to CartProduct
+    const cartProduct: CartProduct = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      stock: product.stock,
+      vendorId: product.vendorId,
+      vendorName: product.vendorName,
+      vendorPhone: product.vendorPhone,
+      vendorPavilion: product.vendorPavilion,
+      vendorRoom: product.vendorRoom,
+    };
+    
+    const success = addToCart(cartProduct);
     if (success) {
       toast.success("Produit ajouté au panier");
     } else {
@@ -82,7 +96,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           {/* Vendeur */}
           <div className="flex items-center gap-1 mt-2">
             <span className="text-xs text-muted-foreground">
-              par {product.vendeurName}
+              par {product.vendorName}
             </span>
             {product.isVendeurVerified && (
               <BadgeCheck className="h-3.5 w-3.5 text-accent" />

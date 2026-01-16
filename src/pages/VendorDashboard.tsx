@@ -22,8 +22,8 @@ import { mockProducts, mockOrders } from "@/data/mockData";
 const VendorDashboard = () => {
   const [activeTab, setActiveTab] = useState<"produits" | "commandes" | "profil">("produits");
   
-  const vendorProducts = mockProducts.filter((p) => p.vendeurId === "v1");
-  const vendorOrders = mockOrders.filter((o) => o.vendeurId === "v1");
+  const vendorProducts = mockProducts.filter((p) => p.vendorId === "v1");
+  const vendorOrders = mockOrders.filter((o) => o.vendorId === "v1");
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("fr-FR").format(price) + " FCFA";
@@ -254,12 +254,12 @@ const VendorDashboard = () => {
                         </h3>
                         <span
                           className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                            order.status === "en_attente"
+                            order.status === "pending"
                               ? "bg-amber-100 text-amber-700"
                               : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {order.status === "en_attente" ? "En attente" : "Terminé"}
+                          {order.status === "pending" ? "En attente" : "Terminé"}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
@@ -320,7 +320,7 @@ const VendorDashboard = () => {
                     >
                       📞 Appeler
                     </Button>
-                    {order.status === "en_attente" && (
+                    {order.status === "pending" && (
                       <Button
                         size="sm"
                         onClick={() => toast.success("Commande marquée comme terminée")}

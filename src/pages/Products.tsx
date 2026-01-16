@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Product } from "@/types";
 
 const Products = () => {
   const [search, setSearch] = useState("");
@@ -15,12 +16,33 @@ const Products = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const { data: products = [], isLoading: productsLoading } = useProducts({
+  const { data: dbProducts = [], isLoading: productsLoading } = useProducts({
     categoryId: selectedCategory || undefined,
     minPrice: priceMin ? parseInt(priceMin) : undefined,
     maxPrice: priceMax ? parseInt(priceMax) : undefined,
     search: search || undefined,
   });
+
+  // Transform database products to UI Product type
+  const products: Product[] = useMemo(() => {
+    return dbProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      description: p.description || "",
+      image: p.image_url || "/placeholder.svg",
+      category: p.category?.name || "Autre",
+      stock: p.stock,
+      status: (p.is_available && p.stock > 0 ? "disponible" : "epuise") as "disponible" | "epuise",
+      vendorId: p.vendor_id,
+      vendorName: p.vendor?.shop_name || "Vendeur",
+      vendorPhone: p.vendor?.phone || "",
+      vendorPavilion: p.vendor?.pavilion || "",
+      vendorRoom: p.vendor?.room || "",
+      isVendeurVerified: p.vendor?.is_verified || false,
+      createdAt: new Date(p.created_at),
+    }));
+  }, [dbProducts]);
 
   const clearFilters = () => {
     setSearch("");
