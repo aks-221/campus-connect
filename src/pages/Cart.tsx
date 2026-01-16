@@ -21,10 +21,10 @@ const Cart = () => {
       .join("\n");
     
     const message = encodeURIComponent(
-      `Bonjour ${vendor.vendeurName},\n\nJe souhaite commander :\n${productList}\n\nTotal: ${formatPrice(totalPrice)}\n\nVia UAM Commerce.`
+      `Bonjour ${vendor.vendorName},\n\nJe souhaite commander :\n${productList}\n\nTotal: ${formatPrice(totalPrice)}\n\nVia UAM Commerce.`
     );
     
-    window.open(`https://wa.me/${vendor.vendeurPhone.replace(/\s+/g, "")}?text=${message}`, "_blank");
+    window.open(`https://wa.me/${vendor.vendorPhone.replace(/\s+/g, "")}?text=${message}`, "_blank");
     toast.success("Redirection vers WhatsApp...");
   };
 
@@ -76,11 +76,11 @@ const Cart = () => {
             {/* Vendor Info */}
             <div className="bg-secondary/50 rounded-xl p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                {vendor.vendeurName.charAt(0)}
+                {vendor.vendorName.charAt(0)}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vendeur</p>
-                <p className="font-medium text-foreground">{vendor.vendeurName}</p>
+                <p className="font-medium text-foreground">{vendor.vendorName}</p>
               </div>
             </div>
 
@@ -108,9 +108,6 @@ const Cart = () => {
                       {item.product.name}
                     </h3>
                   </Link>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {item.product.category}
-                  </p>
                   <p className="text-lg font-bold text-primary mt-2">
                     {formatPrice(item.product.price)}
                   </p>

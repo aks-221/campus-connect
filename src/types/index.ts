@@ -3,16 +3,16 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'client' | 'vendeur' | 'admin';
+  role: 'client' | 'vendor' | 'admin';
   createdAt: Date;
 }
 
 export interface Vendeur extends User {
-  role: 'vendeur';
+  role: 'vendor';
   pavilion: string;
-  chambre: string;
+  room: string;
   isVerified: boolean;
-  subscriptionStatus: 'actif' | 'expire' | 'essai';
+  subscriptionStatus: 'active' | 'expired' | 'trial' | 'suspended';
   subscriptionEndDate: Date;
 }
 
@@ -25,11 +25,11 @@ export interface Product {
   category: string;
   stock: number;
   status: 'disponible' | 'epuise';
-  vendeurId: string;
-  vendeurName: string;
-  vendeurPhone: string;
-  vendeurPavilion: string;
-  vendeurChambre: string;
+  vendorId: string;
+  vendorName: string;
+  vendorPhone: string;
+  vendorPavilion: string;
+  vendorRoom: string;
   isVendeurVerified: boolean;
   createdAt: Date;
 }
@@ -44,10 +44,10 @@ export interface Order {
   clientId: string;
   clientName: string;
   clientPhone: string;
-  vendeurId: string;
+  vendorId: string;
   products: CartItem[];
   message?: string;
-  status: 'en_attente' | 'termine';
+  status: 'pending' | 'completed' | 'cancelled';
   createdAt: Date;
 }
 

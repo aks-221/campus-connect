@@ -221,7 +221,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">par {product.vendeurName}</p>
+                          <p className="text-xs text-muted-foreground">par {product.vendorName}</p>
                         </div>
                         <span className="text-sm font-semibold text-primary">{formatPrice(product.price)}</span>
                       </div>
@@ -244,11 +244,11 @@ const AdminDashboard = () => {
                           <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
                         </div>
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          order.status === "en_attente" 
+                          order.status === "pending" 
                             ? "bg-amber-100 text-amber-700" 
                             : "bg-green-100 text-green-700"
                         }`}>
-                          {order.status === "en_attente" ? "En attente" : "Terminé"}
+                          {order.status === "pending" ? "En attente" : "Terminé"}
                         </span>
                       </div>
                     ))}
@@ -290,16 +290,16 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">{vendeur.phone}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{vendeur.pavilion}, {vendeur.chambre}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{vendeur.pavilion}, {vendeur.room}</td>
                         <td className="p-4">
                           <span className={`px-2 py-1 text-xs rounded-full ${
-                            vendeur.subscriptionStatus === "actif" 
+                            vendeur.subscriptionStatus === "active" 
                               ? "bg-green-100 text-green-700"
-                              : vendeur.subscriptionStatus === "essai"
+                              : vendeur.subscriptionStatus === "trial"
                               ? "bg-amber-100 text-amber-700"
                               : "bg-red-100 text-red-700"
                           }`}>
-                            {vendeur.subscriptionStatus === "actif" ? "Actif" : vendeur.subscriptionStatus === "essai" ? "Essai" : "Expiré"}
+                            {vendeur.subscriptionStatus === "active" ? "Actif" : vendeur.subscriptionStatus === "trial" ? "Essai" : "Expiré"}
                           </span>
                         </td>
                         <td className="p-4">
@@ -354,7 +354,7 @@ const AdminDashboard = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 text-sm text-muted-foreground">{product.vendeurName}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{product.vendorName}</td>
                         <td className="p-4 text-sm font-semibold text-primary">{formatPrice(product.price)}</td>
                         <td className="p-4 text-sm text-muted-foreground">{product.stock}</td>
                         <td className="p-4">
@@ -422,13 +422,13 @@ const AdminDashboard = () => {
                         </td>
                         <td className="p-4">
                           <span className={`px-2 py-1 text-xs rounded-full ${
-                            vendeur.subscriptionStatus === "actif" 
+                            vendeur.subscriptionStatus === "active" 
                               ? "bg-green-100 text-green-700"
-                              : vendeur.subscriptionStatus === "essai"
+                              : vendeur.subscriptionStatus === "trial"
                               ? "bg-amber-100 text-amber-700"
                               : "bg-red-100 text-red-700"
                           }`}>
-                            {vendeur.subscriptionStatus === "actif" ? "✓ Actif" : vendeur.subscriptionStatus === "essai" ? "🎁 Essai gratuit" : "⚠ Expiré"}
+                            {vendeur.subscriptionStatus === "active" ? "✓ Actif" : vendeur.subscriptionStatus === "trial" ? "🎁 Essai gratuit" : "⚠ Expiré"}
                           </span>
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">
@@ -436,7 +436,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="p-4">
                           <div className="flex gap-2">
-                            {vendeur.subscriptionStatus === "expire" && (
+                            {vendeur.subscriptionStatus === "expired" && (
                               <>
                                 <Button size="sm" onClick={() => toast.success("Abonnement activé")}>
                                   Activer
@@ -446,7 +446,7 @@ const AdminDashboard = () => {
                                 </Button>
                               </>
                             )}
-                            {vendeur.subscriptionStatus !== "expire" && (
+                            {vendeur.subscriptionStatus !== "expired" && (
                               <Button size="sm" variant="outline" className="text-destructive" onClick={() => toast.error("Vendeur suspendu")}>
                                 Suspendre
                               </Button>
@@ -481,7 +481,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-foreground">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.vendeurName}</p>
+                          <p className="text-xs text-muted-foreground">{product.vendorName}</p>
                         </div>
                         <span className="text-sm text-muted-foreground">{Math.floor(Math.random() * 50) + 10} vues</span>
                       </div>
@@ -620,15 +620,15 @@ const AdminDashboard = () => {
                       <p className="text-sm text-muted-foreground">{formatDate(order.createdAt)}</p>
                     </div>
                     <span className={`px-3 py-1 text-xs rounded-full ${
-                      order.status === "en_attente" 
+                      order.status === "pending" 
                         ? "bg-amber-100 text-amber-700"
                         : "bg-green-100 text-green-700"
                     }`}>
-                      {order.status === "en_attente" ? "En attente retrait" : "Terminé"}
+                      {order.status === "pending" ? "En attente retrait" : "Terminé"}
                     </span>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <p>Vendeur: {order.products[0]?.product.vendeurName}</p>
+                    <p>Vendeur: {order.products[0]?.product.vendorName}</p>
                     <p>Produits: {order.products.map(p => p.product.name).join(", ")}</p>
                   </div>
                 </div>
