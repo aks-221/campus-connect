@@ -4,10 +4,38 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/ProductCard";
 import CategoryCard from "@/components/CategoryCard";
-import { mockProducts, categories } from "@/data/mockData";
+import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Product } from "@/types";
+import { useMemo } from "react";
 
 const Index = () => {
-  const availableProducts = mockProducts.filter(p => p.status === "disponible");
+  const { data: dbProducts = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+
+  // Transform database products to UI Product type
+  const products: Product[] = useMemo(() => {
+    return dbProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: Number(p.price),
+      description: p.description || "",
+      image: p.image_url || "/placeholder.svg",
+      category: p.category?.name || "Autre",
+      stock: p.stock,
+      status: (p.is_available && p.stock > 0 ? "disponible" : "epuise") as "disponible" | "epuise",
+      vendorId: p.vendor_id,
+      vendorName: p.vendor?.shop_name || "Vendeur",
+      vendorPhone: p.vendor?.phone || "",
+      vendorPavilion: p.vendor?.pavilion || "",
+      vendorRoom: p.vendor?.room || "",
+      isVendeurVerified: p.vendor?.is_verified || false,
+      createdAt: new Date(p.created_at),
+    }));
+  }, [dbProducts]);
+
+  const availableProducts = products.filter(p => p.status === "disponible");
 
   return (
     <Layout>
@@ -64,7 +92,7 @@ const Index = () => {
           </div>
           <div className="bg-card rounded-2xl p-4 text-center shadow-card border border-border/50">
             <ShoppingBag className="h-6 w-6 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">500+</p>
+            <p className="text-2xl font-bold text-foreground">{products.length}+</p>
             <p className="text-xs text-muted-foreground">Produits</p>
           </div>
         </div>
@@ -82,11 +110,19 @@ const Index = () => {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-          {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
-        </div>
+        {categoriesLoading ? (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            {categories.map((category) => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Featured Products */}
@@ -107,11 +143,31 @@ const Index = () => {
             </Button>
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {availableProducts.slice(0, 4).map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {productsLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="aspect-square rounded-2xl" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : availableProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {availableProducts.slice(0, 4).map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Aucun produit disponible pour le moment</p>
+            <Link to="/inscription-vendeur" className="text-primary hover:underline mt-2 inline-block">
+              Soyez le premier vendeur !
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* CTA Vendeur */}

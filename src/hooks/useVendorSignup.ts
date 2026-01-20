@@ -2,42 +2,81 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface VendorSignupData {
+  email: string;
+  password: string;
+  fullName: string;
+  shopName: string;
+  pavilion: string;
+  room: string;
+  phone: string;
+  description?: string;
+}
+
+interface VendorSignupResult {
+  success: boolean;
+  error?: string;
+}
+
 export const useVendorSignup = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      userId,
-      shopName,
-      pavilion,
-      room,
-      phone,
-      description,
-    }: {
-      userId: string;
-      shopName: string;
-      pavilion: string;
-      room: string;
-      phone: string;
-      description?: string;
-    }) => {
-      // Create vendor profile
-      const { data: vendorProfile, error: vendorError } = await supabase
+    mutationFn: async (data: VendorSignupData): Promise<VendorSignupResult> => {
+      // 1. Create user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: data.fullName,
+          },
+        },
+      });
+
+      if (authError) {
+        return { success: false, error: authError.message };
+      }
+
+      if (!authData.user) {
+        return { success: false, error: "Erreur lors de la création du compte" };
+      }
+
+      const userId = authData.user.id;
+
+      // 2. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          full_name: data.fullName,
+          phone: data.phone,
+          email: data.email,
+        });
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        // Don't fail the whole process, profile might be auto-created by trigger
+      }
+
+      // 3. Create vendor profile
+      const { error: vendorError } = await supabase
         .from('vendor_profiles')
         .insert({
           user_id: userId,
-          shop_name: shopName,
-          pavilion,
-          room,
-          phone,
-          description,
-        })
-        .select()
-        .single();
+          shop_name: data.shopName || data.fullName,
+          pavilion: data.pavilion,
+          room: data.room,
+          phone: data.phone,
+          description: data.description,
+        });
 
-      if (vendorError) throw vendorError;
+      if (vendorError) {
+        return { success: false, error: vendorError.message };
+      }
 
-      // Add vendor role
+      // 4. Add vendor role
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
@@ -45,13 +84,18 @@ export const useVendorSignup = () => {
           role: 'vendor',
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('Role error:', roleError);
+        // Don't fail the whole process if role already exists
+      }
 
-      return vendorProfile;
+      return { success: true };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-roles'] });
-      toast.success('Compte vendeur créé avec succès ! Premier mois gratuit.');
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+        queryClient.invalidateQueries({ queryKey: ['vendor-profiles'] });
+      }
     },
     onError: (error: Error) => {
       toast.error('Erreur lors de la création du compte vendeur');
