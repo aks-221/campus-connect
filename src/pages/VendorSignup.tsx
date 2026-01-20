@@ -1,26 +1,59 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, Home } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, MapPin, Home, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useVendorSignup } from "@/hooks/useVendorSignup";
 import uamLogo from "@/assets/uam-logo.png";
 
 const VendorSignup = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
+    shopName: "",
     pavilion: "",
-    chambre: "",
+    room: "",
+    description: "",
   });
   const navigate = useNavigate();
+  const vendorSignup = useVendorSignup();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Inscription vendeur réussie ! Votre 1er mois est gratuit.");
-    navigate("/vendeur");
+    
+    if (formData.password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await vendorSignup.mutateAsync({
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.name,
+        shopName: formData.shopName || formData.name,
+        pavilion: formData.pavilion,
+        room: formData.room,
+        phone: formData.phone,
+        description: formData.description,
+      });
+      
+      if (result.success) {
+        toast.success("Inscription vendeur réussie ! Votre 1er mois est gratuit.");
+        navigate("/vendeur");
+      } else {
+        toast.error(result.error || "Une erreur est survenue");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,7 +104,7 @@ const VendorSignup = () => {
       </div>
 
       {/* Right Panel - Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-12">
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-12 overflow-y-auto">
         <div className="mx-auto w-full max-w-sm">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 mb-8">
@@ -106,6 +139,22 @@ const VendorSignup = () => {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Votre nom"
                   required
+                  className="w-full h-12 pl-10 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">
+                Nom de la boutique
+              </label>
+              <div className="relative">
+                <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={formData.shopName}
+                  onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+                  placeholder="Ma Boutique"
                   className="w-full h-12 pl-10 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -170,8 +219,8 @@ const VendorSignup = () => {
                   <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
                     type="text"
-                    value={formData.chambre}
-                    onChange={(e) => setFormData({ ...formData, chambre: e.target.value })}
+                    value={formData.room}
+                    onChange={(e) => setFormData({ ...formData, room: e.target.value })}
                     placeholder="204"
                     required
                     className="w-full h-12 pl-10 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -192,6 +241,7 @@ const VendorSignup = () => {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
                   required
+                  minLength={6}
                   className="w-full h-12 pl-10 pr-12 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 <button
@@ -210,8 +260,8 @@ const VendorSignup = () => {
               L'abonnement est de 1 000 FCFA/mois après le 1er mois gratuit.
             </p>
 
-            <Button type="submit" size="lg" className="w-full">
-              Créer ma boutique
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              {loading ? "Création en cours..." : "Créer ma boutique"}
             </Button>
           </form>
 
