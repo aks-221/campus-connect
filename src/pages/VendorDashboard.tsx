@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Package,
   ShoppingCart,
@@ -13,30 +13,97 @@ import {
   Settings,
   BadgeCheck,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import uamLogo from "@/assets/uam-logo.png";
-import { mockProducts, mockOrders } from "@/data/mockData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVendorProducts, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
+import { useVendorOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
+import { AddProductDialog } from "@/components/vendor/AddProductDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const VendorDashboard = () => {
+  const navigate = useNavigate();
+  const { profile, vendorProfile, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<"produits" | "commandes" | "profil">("produits");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+
+  const { data: products = [], isLoading: productsLoading } = useVendorProducts(vendorProfile?.id);
+  const { data: orders = [], isLoading: ordersLoading } = useVendorOrders(vendorProfile?.id);
   
-  const vendorProducts = mockProducts.filter((p) => p.vendorId === "v1");
-  const vendorOrders = mockOrders.filter((o) => o.vendorId === "v1");
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
+  const updateOrderStatus = useUpdateOrderStatus();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("fr-FR").format(price) + " FCFA";
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Intl.DateTimeFormat("fr-FR", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(date);
+    }).format(new Date(date));
   };
+
+  const toggleAvailability = async (productId: string, currentStatus: boolean) => {
+    await updateProduct.mutateAsync({
+      id: productId,
+      is_available: !currentStatus,
+    });
+  };
+
+  const handleDeleteProduct = async () => {
+    if (deleteProductId) {
+      await deleteProduct.mutateAsync(deleteProductId);
+      setDeleteProductId(null);
+    }
+  };
+
+  const handleCompleteOrder = async (orderId: string) => {
+    await updateOrderStatus.mutateAsync({ orderId, status: "completed" });
+  };
+
+  const getSubscriptionStatus = () => {
+    if (!vendorProfile) return { label: "Inactif", color: "bg-destructive/10 text-destructive" };
+    
+    switch (vendorProfile.subscription_status) {
+      case "active":
+        return { label: "Abonnement actif", color: "bg-green-100 text-green-700" };
+      case "trial":
+        return { label: "Période d'essai", color: "bg-amber-100 text-amber-700" };
+      case "expired":
+        return { label: "Expiré", color: "bg-destructive/10 text-destructive" };
+      default:
+        return { label: "Suspendu", color: "bg-destructive/10 text-destructive" };
+    }
+  };
+
+  const subscriptionStatus = getSubscriptionStatus();
+
+  const availableProducts = products.filter(p => p.is_available && p.stock > 0);
+  const outOfStockProducts = products.filter(p => !p.is_available || p.stock === 0);
+  const pendingOrders = orders.filter(o => o.status === "pending");
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,10 +123,9 @@ const VendorDashboard = () => {
           </Link>
 
           <div className="flex items-center gap-4">
-            {/* Subscription Status */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 text-green-700">
+            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full ${subscriptionStatus.color}`}>
               <BadgeCheck className="h-4 w-4" />
-              <span className="text-xs font-medium">Abonnement actif</span>
+              <span className="text-xs font-medium">{subscriptionStatus.label}</span>
             </div>
             
             <Link to="/">
@@ -68,7 +134,12 @@ const VendorDashboard = () => {
                 <span className="hidden sm:inline">Boutique</span>
               </Button>
             </Link>
-            <Button variant="ghost" size="sm" className="gap-2 text-destructive">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 text-destructive"
+              onClick={handleSignOut}
+            >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Déconnexion</span>
             </Button>
@@ -80,7 +151,7 @@ const VendorDashboard = () => {
         {/* Welcome */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground">
-            Bonjour, Fatou ! 👋
+            Bonjour, {vendorProfile?.shop_name || profile?.full_name} ! 👋
           </h1>
           <p className="text-muted-foreground mt-1">
             Gérez vos produits et commandes depuis votre espace vendeur.
@@ -91,26 +162,22 @@ const VendorDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
             <Package className="h-6 w-6 text-primary mb-2" />
-            <p className="text-2xl font-bold text-foreground">{vendorProducts.length}</p>
+            <p className="text-2xl font-bold text-foreground">{products.length}</p>
             <p className="text-sm text-muted-foreground">Produits</p>
           </div>
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
             <ShoppingCart className="h-6 w-6 text-accent mb-2" />
-            <p className="text-2xl font-bold text-foreground">{vendorOrders.length}</p>
-            <p className="text-sm text-muted-foreground">Commandes</p>
+            <p className="text-2xl font-bold text-foreground">{pendingOrders.length}</p>
+            <p className="text-sm text-muted-foreground">En attente</p>
           </div>
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
             <Eye className="h-6 w-6 text-green-500 mb-2" />
-            <p className="text-2xl font-bold text-foreground">
-              {vendorProducts.filter((p) => p.status === "disponible").length}
-            </p>
+            <p className="text-2xl font-bold text-foreground">{availableProducts.length}</p>
             <p className="text-sm text-muted-foreground">Disponibles</p>
           </div>
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
             <AlertCircle className="h-6 w-6 text-destructive mb-2" />
-            <p className="text-2xl font-bold text-foreground">
-              {vendorProducts.filter((p) => p.status === "epuise").length}
-            </p>
+            <p className="text-2xl font-bold text-foreground">{outOfStockProducts.length}</p>
             <p className="text-sm text-muted-foreground">Épuisés</p>
           </div>
         </div>
@@ -138,6 +205,11 @@ const VendorDashboard = () => {
           >
             <ShoppingCart className="h-4 w-4 inline mr-2" />
             Commandes reçues
+            {pendingOrders.length > 0 && (
+              <span className="ml-2 bg-destructive text-destructive-foreground text-xs px-2 py-0.5 rounded-full">
+                {pendingOrders.length}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("profil")}
@@ -152,187 +224,120 @@ const VendorDashboard = () => {
           </button>
         </div>
 
-        {/* Content */}
+        {/* Products Content */}
         {activeTab === "produits" && (
           <div className="space-y-4">
-            {/* Add Product Button */}
             <div className="flex justify-end">
-              <Button onClick={() => toast.info("Fonctionnalité à venir")} className="gap-2">
+              <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Ajouter un produit
               </Button>
             </div>
 
-            {/* Products Grid */}
-            <div className="grid gap-4">
-              {vendorProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-card rounded-2xl border border-border p-4 flex gap-4 items-center"
-                >
-                  {/* Image */}
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-foreground line-clamp-1">
-                        {product.name}
-                      </h3>
-                      <span
-                        className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                          product.status === "disponible"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-destructive/10 text-destructive"
-                        }`}
-                      >
-                        {product.status === "disponible" ? "Disponible" : "Épuisé"}
-                      </span>
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Aucun produit
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  Commencez par ajouter votre premier produit.
+                </p>
+                <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Ajouter un produit
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-card rounded-2xl border border-border p-4 flex gap-4 items-center"
+                  >
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                      <img
+                        src={product.image_url || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {product.category} • Stock: {product.stock}
-                    </p>
-                    <p className="text-lg font-bold text-primary mt-1">
-                      {formatPrice(product.price)}
-                    </p>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toast.info("Modifier le produit")}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toast.info("Basculer disponibilité")}
-                    >
-                      {product.status === "disponible" ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => toast.error("Produit supprimé")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "commandes" && (
-          <div className="space-y-4">
-            {vendorOrders.length > 0 ? (
-              vendorOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-card rounded-2xl border border-border p-6"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-foreground">
-                          {order.clientName}
+                        <h3 className="font-medium text-foreground line-clamp-1">
+                          {product.name}
                         </h3>
                         <span
                           className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
-                            order.status === "pending"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-green-100 text-green-700"
+                            product.is_available && product.stock > 0
+                              ? "bg-green-100 text-green-700"
+                              : "bg-destructive/10 text-destructive"
                           }`}
                         >
-                          {order.status === "pending" ? "En attente" : "Terminé"}
+                          {product.is_available && product.stock > 0 ? "Disponible" : "Épuisé"}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        📞 {order.clientPhone}
+                        {(product.category as any)?.name || "Sans catégorie"} • Stock: {product.stock}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDate(order.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Products */}
-                  <div className="space-y-2 mb-4">
-                    {order.products.map((item) => (
-                      <div
-                        key={item.product.id}
-                        className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl"
-                      >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary">
-                          <img
-                            src={item.product.image}
-                            alt={item.product.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {item.product.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Quantité: {item.quantity}
-                          </p>
-                        </div>
-                        <p className="font-semibold text-primary">
-                          {formatPrice(item.product.price * item.quantity)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Message */}
-                  {order.message && (
-                    <div className="p-3 bg-accent/10 rounded-xl mb-4">
-                      <p className="text-sm text-foreground">
-                        💬 {order.message}
+                      <p className="text-lg font-bold text-primary mt-1">
+                        {formatPrice(product.price)}
                       </p>
                     </div>
-                  )}
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        window.open(`tel:${order.clientPhone}`, "_blank");
-                      }}
-                    >
-                      📞 Appeler
-                    </Button>
-                    {order.status === "pending" && (
+                    <div className="flex gap-2">
                       <Button
-                        size="sm"
-                        onClick={() => toast.success("Commande marquée comme terminée")}
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditProduct(product);
+                          setAddDialogOpen(true);
+                        }}
                       >
-                        ✅ Marquer terminé
+                        <Edit2 className="h-4 w-4" />
                       </Button>
-                    )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleAvailability(product.id, product.is_available ?? true)}
+                        disabled={updateProduct.isPending}
+                      >
+                        {product.is_available ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={() => setDeleteProductId(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Orders Content */}
+        {activeTab === "commandes" && (
+          <div className="space-y-4">
+            {ordersLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-12 bg-card rounded-2xl border border-border">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   Aucune commande
@@ -341,10 +346,105 @@ const VendorDashboard = () => {
                   Vous n'avez pas encore reçu de commande.
                 </p>
               </div>
+            ) : (
+              orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-card rounded-2xl border border-border p-6"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground">
+                          {(order as any).client?.full_name || "Client"}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                            order.status === "pending"
+                              ? "bg-amber-100 text-amber-700"
+                              : order.status === "completed"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-destructive/10 text-destructive"
+                          }`}
+                        >
+                          {order.status === "pending" ? "En attente" : 
+                           order.status === "completed" ? "Terminé" : "Annulé"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        📞 {(order as any).client?.phone || "Non renseigné"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDate(order.created_at)}
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold text-primary">
+                      {formatPrice(order.total_amount)}
+                    </p>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="space-y-2 mb-4">
+                    {(order as any).order_items?.map((item: any) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-3 bg-secondary/50 rounded-xl"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            Produit #{item.product_id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Quantité: {item.quantity} × {formatPrice(item.unit_price)}
+                          </p>
+                        </div>
+                        <p className="font-semibold text-primary">
+                          {formatPrice(item.unit_price * item.quantity)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {order.message && (
+                    <div className="p-3 bg-accent/10 rounded-xl mb-4">
+                      <p className="text-sm text-foreground">
+                        💬 {order.message}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const phone = (order as any).client?.phone;
+                        if (phone) window.open(`tel:${phone}`, "_blank");
+                        else toast.error("Numéro non disponible");
+                      }}
+                    >
+                      📞 Appeler
+                    </Button>
+                    {order.status === "pending" && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleCompleteOrder(order.id)}
+                        disabled={updateOrderStatus.isPending}
+                      >
+                        {updateOrderStatus.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        ✅ Marquer terminé
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
+        {/* Profile Content */}
         {activeTab === "profil" && (
           <div className="max-w-xl">
             <div className="bg-card rounded-2xl border border-border p-6">
@@ -355,12 +455,13 @@ const VendorDashboard = () => {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1.5 block">
-                    Nom
+                    Nom de la boutique
                   </label>
                   <input
                     type="text"
-                    defaultValue="Fatou Diallo"
-                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    defaultValue={vendorProfile?.shop_name}
+                    readOnly
+                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
                   />
                 </div>
                 <div>
@@ -369,8 +470,9 @@ const VendorDashboard = () => {
                   </label>
                   <input
                     type="tel"
-                    defaultValue="+221 77 123 45 67"
-                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    defaultValue={vendorProfile?.phone}
+                    readOnly
+                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -380,8 +482,9 @@ const VendorDashboard = () => {
                     </label>
                     <input
                       type="text"
-                      defaultValue="Pavillon A"
-                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      defaultValue={vendorProfile?.pavilion}
+                      readOnly
+                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
                     />
                   </div>
                   <div>
@@ -390,15 +493,12 @@ const VendorDashboard = () => {
                     </label>
                     <input
                       type="text"
-                      defaultValue="204"
-                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      defaultValue={vendorProfile?.room}
+                      readOnly
+                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
                     />
                   </div>
                 </div>
-
-                <Button onClick={() => toast.success("Profil mis à jour")} className="w-full">
-                  Enregistrer
-                </Button>
               </div>
             </div>
 
@@ -407,12 +507,18 @@ const VendorDashboard = () => {
               <h2 className="text-lg font-semibold text-foreground mb-4">
                 Abonnement
               </h2>
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
+              <div className={`flex items-center justify-between p-4 rounded-xl ${subscriptionStatus.color.replace('text-', 'bg-').split(' ')[0]}/20`}>
                 <div>
-                  <p className="font-medium text-green-700">Abonnement actif</p>
-                  <p className="text-sm text-green-600">Expire le 10 février 2025</p>
+                  <p className={`font-medium ${subscriptionStatus.color.split(' ')[1]}`}>
+                    {subscriptionStatus.label}
+                  </p>
+                  {vendorProfile?.subscription_end_date && (
+                    <p className={`text-sm ${subscriptionStatus.color.split(' ')[1]}/80`}>
+                      Expire le {new Date(vendorProfile.subscription_end_date).toLocaleDateString("fr-FR")}
+                    </p>
+                  )}
                 </div>
-                <BadgeCheck className="h-8 w-8 text-green-500" />
+                <BadgeCheck className={`h-8 w-8 ${subscriptionStatus.color.split(' ')[1]}`} />
               </div>
               <p className="text-sm text-muted-foreground mt-4">
                 Renouvellement : 1 000 FCFA/mois via Wave ou Orange Money
@@ -421,6 +527,40 @@ const VendorDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Add/Edit Product Dialog */}
+      {vendorProfile && (
+        <AddProductDialog
+          open={addDialogOpen}
+          onOpenChange={(open) => {
+            setAddDialogOpen(open);
+            if (!open) setEditProduct(null);
+          }}
+          vendorId={vendorProfile.id}
+          editProduct={editProduct}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteProductId} onOpenChange={() => setDeleteProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le produit sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
