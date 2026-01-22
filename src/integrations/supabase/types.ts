@@ -148,6 +148,13 @@ export type Database = {
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       products: {
@@ -203,6 +210,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -314,7 +328,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vendor_profiles_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_verified: boolean | null
+          pavilion: string | null
+          shop_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          pavilion?: string | null
+          shop_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_verified?: boolean | null
+          pavilion?: string | null
+          shop_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_vendor_profile_id: { Args: { _user_id: string }; Returns: string }
