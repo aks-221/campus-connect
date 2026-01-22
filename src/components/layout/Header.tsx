@@ -1,14 +1,25 @@
-import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, Heart, User, Menu, Search, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ShoppingCart, Heart, User, Menu, Search, X, Store, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import uamLogo from "@/assets/uam-logo.png";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { totalItems } = useCart();
+  const { user, profile, isVendor, isAdmin, signOut, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -17,6 +28,12 @@ const Header = () => {
     { path: "/produits", label: "Produits" },
     { path: "/categories", label: "Catégories" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Déconnexion réussie");
+    navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -80,12 +97,67 @@ const Header = () => {
               )}
             </Button>
           </Link>
-          <Link to="/connexion" className="hidden sm:block">
-            <Button variant="default" size="sm" className="gap-2">
-              <User className="h-4 w-4" />
-              Connexion
-            </Button>
-          </Link>
+
+          {/* User Menu */}
+          {!loading && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline max-w-[100px] truncate">
+                    {profile?.full_name || "Mon compte"}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{profile?.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                
+                {isVendor && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/vendeur" className="cursor-pointer">
+                      <Store className="mr-2 h-4 w-4" />
+                      Espace Vendeur
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Administration
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+                {!isVendor && !isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/inscription-vendeur" className="cursor-pointer">
+                      <Store className="mr-2 h-4 w-4" />
+                      Devenir vendeur
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/connexion" className="hidden sm:block">
+              <Button variant="default" size="sm" className="gap-2">
+                <User className="h-4 w-4" />
+                Connexion
+              </Button>
+            </Link>
+          )}
           
           {/* Mobile Menu Button */}
           <Button
@@ -128,13 +200,49 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            <Link
-              to="/connexion"
-              onClick={() => setIsMenuOpen(false)}
-              className="py-2 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground text-center mt-2"
-            >
-              Connexion
-            </Link>
+            
+            {user ? (
+              <>
+                {isVendor && (
+                  <Link
+                    to="/vendeur"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="py-2 px-4 rounded-lg text-sm font-medium hover:bg-secondary flex items-center gap-2"
+                  >
+                    <Store className="h-4 w-4" />
+                    Espace Vendeur
+                  </Link>
+                )}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="py-2 px-4 rounded-lg text-sm font-medium hover:bg-secondary flex items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Administration
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setIsMenuOpen(false);
+                  }}
+                  className="py-2 px-4 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 flex items-center gap-2 mt-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/connexion"
+                onClick={() => setIsMenuOpen(false)}
+                className="py-2 px-4 rounded-lg text-sm font-medium bg-primary text-primary-foreground text-center mt-2"
+              >
+                Connexion
+              </Link>
+            )}
           </nav>
         </div>
       )}

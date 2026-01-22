@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,20 @@ const Login = () => {
     password: "",
   });
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, isVendor, isAdmin, loading: authLoading } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else if (isVendor) {
+        navigate("/vendeur");
+      } else {
+        navigate("/");
+      }
+    }
+  }, [user, isVendor, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +43,7 @@ const Login = () => {
           toast.error(error.message || "Erreur de connexion");
         } else {
           toast.success("Connexion réussie !");
-          navigate("/");
+          // Redirection will be handled by useEffect after roles are loaded
         }
       } else {
         if (formData.password.length < 6) {
@@ -52,6 +65,15 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Don't show login form if already logged in
+  if (!authLoading && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
