@@ -62,7 +62,7 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/inscription-vendeur">
-                <Button size="lg" variant="outline" className="gap-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
+                <Button size="lg" variant="outline" className="gap-2 border-2 border-primary-foreground/60 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:border-primary-foreground">
                   <Store className="h-5 w-5" />
                   Devenir vendeur
                 </Button>
