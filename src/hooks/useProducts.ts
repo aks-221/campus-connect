@@ -16,7 +16,7 @@ export const useProducts = (filters?: {
         .from('products')
         .select(`
           *,
-          vendor:vendor_profiles(*),
+          vendor:vendor_profiles_public(*),
           category:categories(*)
         `)
         .eq('is_available', true)
@@ -51,7 +51,7 @@ export const useProduct = (id: string) => {
         .from('products')
         .select(`
           *,
-          vendor:vendor_profiles(*),
+          vendor:vendor_profiles_public(*),
           category:categories(*)
         `)
         .eq('id', id)
