@@ -35,8 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [vendorProfile, setVendorProfile] = useState<VendorProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
 
   const fetchUserData = async (userId: string) => {
+    setDataLoading(true);
     try {
       // Fetch profile
       const { data: profileData } = await supabase
@@ -70,6 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -82,13 +86,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         
-        if (session?.user) {
-          // Defer fetching to avoid blocking the auth state change
-          setTimeout(() => fetchUserData(session.user.id), 0);
+        if (newSession?.user) {
+          // Fetch user data synchronously (not deferred) to ensure roles are loaded before loading = false
+          await fetchUserData(newSession.user.id);
         } else {
           setProfile(null);
           setRoles([]);
@@ -99,11 +103,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     // Then check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      if (existingSession?.user) {
+        await fetchUserData(existingSession.user.id);
       }
       setLoading(false);
     });
@@ -145,6 +149,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isVendor = roles.includes('vendor');
   const isAdmin = roles.includes('admin');
 
+  // Consider loading = true until both auth AND user data are loaded
+  const isLoading = loading || dataLoading;
+
   return (
     <AuthContext.Provider
       value={{
@@ -153,7 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         profile,
         roles,
         vendorProfile,
-        loading,
+        loading: isLoading,
         signUp,
         signIn,
         signOut,
