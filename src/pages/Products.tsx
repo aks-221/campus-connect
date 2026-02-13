@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/ProductCard";
@@ -9,11 +10,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Product } from "@/types";
 
 const Products = () => {
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get("categorie") || "");
   const [priceMin, setPriceMin] = useState<string>("");
   const [priceMax, setPriceMax] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync URL params
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    const urlCategory = searchParams.get("categorie");
+    if (urlSearch) setSearch(urlSearch);
+    if (urlCategory) setSelectedCategory(urlCategory);
+  }, [searchParams]);
 
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const { data: dbProducts = [], isLoading: productsLoading } = useProducts({

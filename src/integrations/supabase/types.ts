@@ -335,6 +335,8 @@ export type Database = {
           id: string | null
           is_verified: boolean | null
           pavilion: string | null
+          phone: string | null
+          room: string | null
           shop_name: string | null
         }
         Insert: {
@@ -343,6 +345,8 @@ export type Database = {
           id?: string | null
           is_verified?: boolean | null
           pavilion?: string | null
+          phone?: string | null
+          room?: string | null
           shop_name?: string | null
         }
         Update: {
@@ -351,6 +355,8 @@ export type Database = {
           id?: string | null
           is_verified?: boolean | null
           pavilion?: string | null
+          phone?: string | null
+          room?: string | null
           shop_name?: string | null
         }
         Relationships: []

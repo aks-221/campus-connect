@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShoppingCart, Heart, User, Menu, Search, X, Store, LogOut, Settings } from "lucide-react";
+import { ShoppingCart, Heart, User, Menu, Search, X, Store, LogOut, Settings, Package } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { totalItems } = useCart();
   const { user, profile, isVendor, isAdmin, signOut, loading } = useAuth();
   const location = useLocation();
@@ -33,6 +34,15 @@ const Header = () => {
     await signOut();
     toast.success("Déconnexion réussie");
     navigate("/");
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/produits?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+      setIsMenuOpen(false);
+    }
   };
 
   return (
@@ -69,16 +79,18 @@ const Header = () => {
         </nav>
 
         {/* Search Bar - Desktop */}
-        <div className="hidden lg:flex flex-1 max-w-md mx-6">
+        <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-md mx-6">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher un produit..."
               className="w-full h-10 pl-10 pr-4 rounded-xl bg-secondary border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
-        </div>
+        </form>
 
         {/* Actions */}
         <div className="flex items-center gap-2">
@@ -115,6 +127,20 @@ const Header = () => {
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                 </div>
                 <DropdownMenuSeparator />
+
+                <DropdownMenuItem asChild>
+                  <Link to="/mes-commandes" className="cursor-pointer">
+                    <Package className="mr-2 h-4 w-4" />
+                    Mes commandes
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link to="/favoris" className="cursor-pointer">
+                    <Heart className="mr-2 h-4 w-4" />
+                    Mes favoris
+                  </Link>
+                </DropdownMenuItem>
                 
                 {isVendor && (
                   <DropdownMenuItem asChild>
@@ -175,16 +201,18 @@ const Header = () => {
       {isMenuOpen && (
         <div className="md:hidden border-t border-border bg-card animate-slide-up">
           {/* Mobile Search */}
-          <div className="p-4">
+          <form onSubmit={handleSearch} className="p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher..."
                 className="w-full h-10 pl-10 pr-4 rounded-xl bg-secondary border-0 text-sm"
               />
             </div>
-          </div>
+          </form>
           <nav className="flex flex-col px-4 pb-4 gap-2">
             {navLinks.map((link) => (
               <Link
@@ -203,6 +231,14 @@ const Header = () => {
             
             {user ? (
               <>
+                <Link
+                  to="/mes-commandes"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="py-2 px-4 rounded-lg text-sm font-medium hover:bg-secondary flex items-center gap-2"
+                >
+                  <Package className="h-4 w-4" />
+                  Mes commandes
+                </Link>
                 {isVendor && (
                   <Link
                     to="/vendeur"

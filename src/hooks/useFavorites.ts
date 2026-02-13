@@ -15,7 +15,7 @@ export const useFavorites = (userId?: string) => {
           *,
           product:products(
             *,
-            vendor:vendor_profiles(*),
+            vendor:vendor_profiles_public(*),
             category:categories(*)
           )
         `)
