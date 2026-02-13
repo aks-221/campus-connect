@@ -15,6 +15,9 @@ import Login from "./pages/Login";
 import VendorSignup from "./pages/VendorSignup";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import Favorites from "./pages/Favorites";
+import Categories from "./pages/Categories";
+import MyOrders from "./pages/MyOrders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +35,9 @@ const App = () => (
               <Route path="/produits" element={<Products />} />
               <Route path="/produit/:id" element={<ProductDetail />} />
               <Route path="/panier" element={<Cart />} />
+              <Route path="/favoris" element={<Favorites />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/mes-commandes" element={<MyOrders />} />
               <Route path="/connexion" element={<Login />} />
               <Route path="/inscription-vendeur" element={<VendorSignup />} />
               <Route 
