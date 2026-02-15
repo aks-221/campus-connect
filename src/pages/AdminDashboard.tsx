@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Users,
@@ -88,6 +89,30 @@ const AdminDashboard = () => {
       vendorId,
       updates: { subscription_status: "suspended" },
     });
+  };
+
+  const handleRenewSubscription = async (vendorId: string) => {
+    const now = new Date();
+    const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 days
+    await updateVendorStatus.mutateAsync({
+      vendorId,
+      updates: { 
+        subscription_status: "active",
+      },
+    });
+    // Update dates separately since they're not in the type
+    const { error } = await supabase
+      .from('vendor_profiles')
+      .update({ 
+        subscription_start_date: now.toISOString(),
+        subscription_end_date: endDate.toISOString(),
+      })
+      .eq('id', vendorId);
+    if (error) {
+      toast.error("Erreur lors du renouvellement");
+    } else {
+      toast.success("Abonnement renouvelé pour 30 jours");
+    }
   };
 
   const handleDeleteProduct = async () => {
@@ -399,9 +424,21 @@ const AdminDashboard = () => {
                                     <XCircle className="h-4 w-4 text-amber-500" />
                                   </Button>
                                 )}
+                                {(vendor.subscription_status === "expired" || vendor.subscription_status === "suspended") && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Renouveler l'abonnement (30 jours)"
+                                    onClick={() => handleRenewSubscription(vendor.id)}
+                                    disabled={updateVendorStatus.isPending}
+                                  >
+                                    <TrendingUp className="h-4 w-4 text-green-500" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  title="Suspendre"
                                   onClick={() => handleSuspendVendor(vendor.id)}
                                   disabled={updateVendorStatus.isPending}
                                 >
