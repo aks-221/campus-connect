@@ -363,6 +363,7 @@ export type Database = {
       }
     }
     Functions: {
+      expire_vendor_subscriptions: { Args: never; Returns: number }
       get_vendor_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
