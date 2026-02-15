@@ -101,7 +101,7 @@ export const useUpdateVendorStatus = () => {
       updates 
     }: { 
       vendorId: string; 
-      updates: Partial<Pick<VendorProfile, 'is_verified' | 'subscription_status'>> 
+      updates: Partial<Pick<VendorProfile, 'is_verified' | 'subscription_status' | 'subscription_start_date' | 'subscription_end_date'>> 
     }) => {
       const { data, error } = await supabase
         .from('vendor_profiles')

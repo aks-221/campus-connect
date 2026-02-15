@@ -87,6 +87,11 @@ const VendorDashboard = () => {
   const getSubscriptionStatus = () => {
     if (!vendorProfile) return { label: "Inactif", color: "bg-destructive/10 text-destructive" };
     
+    // Check if subscription is expired based on end date
+    if (vendorProfile.subscription_end_date && new Date(vendorProfile.subscription_end_date) < new Date()) {
+      return { label: "Expiré", color: "bg-destructive/10 text-destructive" };
+    }
+    
     switch (vendorProfile.subscription_status) {
       case "active":
         return { label: "Abonnement actif", color: "bg-green-100 text-green-700" };
@@ -100,6 +105,11 @@ const VendorDashboard = () => {
   };
 
   const subscriptionStatus = getSubscriptionStatus();
+  
+  const isSubscriptionExpired = !vendorProfile || 
+    vendorProfile.subscription_status === "expired" || 
+    vendorProfile.subscription_status === "suspended" ||
+    (vendorProfile.subscription_end_date && new Date(vendorProfile.subscription_end_date) < new Date());
 
   const availableProducts = products.filter(p => p.is_available && p.stock > 0);
   const outOfStockProducts = products.filter(p => !p.is_available || p.stock === 0);
@@ -158,6 +168,26 @@ const VendorDashboard = () => {
           </p>
         </div>
 
+        {/* Subscription Expired Banner */}
+        {isSubscriptionExpired && (
+          <div className="mb-8 p-6 bg-destructive/10 border border-destructive/30 rounded-2xl">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-destructive text-lg">
+                  Abonnement expiré
+                </h3>
+                <p className="text-destructive/80 mt-1">
+                  Votre abonnement a expiré. Vos produits ne sont plus visibles par les clients. 
+                  Renouvelez votre abonnement (1 000 FCFA/mois) via Wave ou Orange Money pour réactiver votre boutique.
+                </p>
+                <p className="text-sm text-destructive/60 mt-2">
+                  📞 Contactez l'administration pour renouveler.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
@@ -228,7 +258,12 @@ const VendorDashboard = () => {
         {activeTab === "produits" && (
           <div className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+              <Button 
+                onClick={() => setAddDialogOpen(true)} 
+                className="gap-2"
+                disabled={isSubscriptionExpired}
+                title={isSubscriptionExpired ? "Renouvelez votre abonnement pour ajouter des produits" : undefined}
+              >
                 <Plus className="h-4 w-4" />
                 Ajouter un produit
               </Button>
@@ -294,6 +329,7 @@ const VendorDashboard = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        disabled={isSubscriptionExpired}
                         onClick={() => {
                           setEditProduct(product);
                           setAddDialogOpen(true);
@@ -305,7 +341,7 @@ const VendorDashboard = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => toggleAvailability(product.id, product.is_available ?? true)}
-                        disabled={updateProduct.isPending}
+                        disabled={updateProduct.isPending || isSubscriptionExpired}
                       >
                         {product.is_available ? (
                           <EyeOff className="h-4 w-4" />
@@ -317,6 +353,7 @@ const VendorDashboard = () => {
                         variant="ghost"
                         size="icon"
                         className="text-destructive"
+                        disabled={isSubscriptionExpired}
                         onClick={() => setDeleteProductId(product.id)}
                       >
                         <Trash2 className="h-4 w-4" />
