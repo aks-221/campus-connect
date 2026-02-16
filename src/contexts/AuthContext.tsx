@@ -84,14 +84,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let initialSessionHandled = false;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        // Skip if this is the INITIAL_SESSION event — we handle it via getSession
+        if (event === 'INITIAL_SESSION') return;
+        
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
-          // Fetch user data synchronously (not deferred) to ensure roles are loaded before loading = false
           await fetchUserData(newSession.user.id);
         } else {
           setProfile(null);
@@ -104,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Then check initial session
     supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+      initialSessionHandled = true;
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
