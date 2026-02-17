@@ -14,6 +14,7 @@ import {
   BadgeCheck,
   AlertCircle,
   Loader2,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -115,6 +116,14 @@ const VendorDashboard = () => {
   const outOfStockProducts = products.filter(p => !p.is_available || p.stock === 0);
   const pendingOrders = orders.filter(o => o.status === "pending");
 
+  // Monthly sales calculation
+  const now = new Date();
+  const currentMonthOrders = orders.filter(o => {
+    const d = new Date(o.created_at);
+    return o.status === "completed" && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthlySalesTotal = currentMonthOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -189,7 +198,7 @@ const VendorDashboard = () => {
           </div>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-card rounded-2xl p-4 border border-border shadow-card">
             <Package className="h-6 w-6 text-primary mb-2" />
             <p className="text-2xl font-bold text-foreground">{products.length}</p>
@@ -209,6 +218,12 @@ const VendorDashboard = () => {
             <AlertCircle className="h-6 w-6 text-destructive mb-2" />
             <p className="text-2xl font-bold text-foreground">{outOfStockProducts.length}</p>
             <p className="text-sm text-muted-foreground">Épuisés</p>
+          </div>
+          <div className="col-span-2 md:col-span-1 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-4 border border-primary/20 shadow-card">
+            <TrendingUp className="h-6 w-6 text-primary mb-2" />
+            <p className="text-2xl font-bold text-foreground">{formatPrice(monthlySalesTotal)}</p>
+            <p className="text-sm text-muted-foreground">Ventes ce mois</p>
+            <p className="text-xs text-muted-foreground mt-1">{currentMonthOrders.length} commande(s)</p>
           </div>
         </div>
 
