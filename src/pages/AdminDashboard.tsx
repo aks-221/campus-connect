@@ -290,6 +290,53 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
+                  {/* Monthly sales per vendor */}
+                  <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
+                    <h3 className="font-semibold text-foreground mb-4">📊 Ventes du mois par vendeur</h3>
+                    {(() => {
+                      const now = new Date();
+                      const monthOrders = orders.filter(o => {
+                        const d = new Date(o.created_at);
+                        return o.status === "completed" && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                      });
+                      const vendorSales = new Map<string, { name: string; total: number; count: number }>();
+                      monthOrders.forEach(o => {
+                        const vid = o.vendor_id;
+                        const existing = vendorSales.get(vid) || { name: o.vendor?.shop_name || "Inconnu", total: 0, count: 0 };
+                        existing.total += Number(o.total_amount);
+                        existing.count += 1;
+                        vendorSales.set(vid, existing);
+                      });
+                      const sorted = [...vendorSales.entries()].sort((a, b) => b[1].total - a[1].total);
+                      const grandTotal = sorted.reduce((s, [, v]) => s + v.total, 0);
+
+                      if (sorted.length === 0) {
+                        return <p className="text-sm text-muted-foreground">Aucune vente complétée ce mois-ci.</p>;
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center pb-3 border-b border-border">
+                            <span className="text-sm font-medium text-muted-foreground">Total du mois</span>
+                            <span className="text-lg font-bold text-primary">{formatPrice(grandTotal)}</span>
+                          </div>
+                          {sorted.map(([vid, v]) => (
+                            <div key={vid} className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                                {v.name.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{v.name}</p>
+                                <p className="text-xs text-muted-foreground">{v.count} commande(s)</p>
+                              </div>
+                              <span className="text-sm font-semibold text-foreground">{formatPrice(v.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* Recent */}
                   <div className="grid lg:grid-cols-2 gap-6">
                     <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
