@@ -157,6 +157,57 @@ export type Database = {
           },
         ]
       }
+      payment_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          status: string
+          transaction_reference: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method: string
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          status?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null

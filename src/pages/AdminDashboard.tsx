@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Users,
@@ -19,6 +20,8 @@ import {
   TrendingUp,
   BadgeCheck,
   Loader2,
+  Wallet,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -43,8 +46,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAllPaymentRequests, useUpdatePaymentRequest } from "@/hooks/usePaymentRequests";
 
-type Tab = "apercu" | "vendeurs" | "produits" | "commandes";
+type Tab = "apercu" | "vendeurs" | "produits" | "commandes" | "paiements";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -61,6 +65,33 @@ const AdminDashboard = () => {
 
   const updateVendorStatus = useUpdateVendorStatus();
   const deleteProduct = useAdminDeleteProduct();
+  const { data: paymentRequests = [], isLoading: paymentsLoading } = useAllPaymentRequests();
+  const updatePaymentRequest = useUpdatePaymentRequest();
+  const queryClient = useQueryClient();
+
+  const pendingPayments = paymentRequests.filter(p => p.status === "pending");
+
+  const handleApprovePayment = async (requestId: string, vendorId: string) => {
+    // Approve the payment request
+    await updatePaymentRequest.mutateAsync({
+      requestId,
+      status: "approved",
+      adminNote: "Paiement vérifié",
+    });
+    // Renew subscription
+    await handleRenewSubscription(vendorId);
+    toast.success("Paiement approuvé et abonnement renouvelé !");
+    queryClient.invalidateQueries({ queryKey: ["payment-requests"] });
+  };
+
+  const handleRejectPayment = async (requestId: string) => {
+    await updatePaymentRequest.mutateAsync({
+      requestId,
+      status: "rejected",
+      adminNote: "Paiement non vérifié",
+    });
+    toast.success("Demande rejetée");
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -132,11 +163,12 @@ const AdminDashboard = () => {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "apercu", label: "Aperçu", icon: <BarChart3 className="h-4 w-4" /> },
     { id: "vendeurs", label: "Vendeurs", icon: <Store className="h-4 w-4" /> },
     { id: "produits", label: "Produits", icon: <Package className="h-4 w-4" /> },
     { id: "commandes", label: "Commandes", icon: <ShoppingCart className="h-4 w-4" /> },
+    { id: "paiements", label: "Paiements", icon: <Wallet className="h-4 w-4" />, badge: pendingPayments.length },
   ];
 
   return (
@@ -166,6 +198,11 @@ const AdminDashboard = () => {
             >
               {tab.icon}
               {tab.label}
+              {tab.badge && tab.badge > 0 ? (
+                <span className="ml-auto bg-destructive text-destructive-foreground text-xs px-2 py-0.5 rounded-full">
+                  {tab.badge}
+                </span>
+              ) : null}
             </button>
           ))}
         </nav>
@@ -641,6 +678,133 @@ const AdminDashboard = () => {
                     )}
                   </div>
                 ))
+              )}
+            </div>
+          )}
+
+          {/* Paiements */}
+          {activeTab === "paiements" && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Demandes de paiement d'abonnement
+              </h2>
+              {paymentsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : paymentRequests.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Aucune demande de paiement</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingPayments.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                        🔔 En attente ({pendingPayments.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {pendingPayments.map((pr) => (
+                          <div key={pr.id} className="bg-card rounded-2xl border-2 border-amber-300 p-5">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-semibold text-foreground text-lg">
+                                  {(pr.vendor as any)?.shop_name || "Vendeur"}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {(pr.vendor as any)?.phone}
+                                </p>
+                              </div>
+                              <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full font-medium">
+                                En attente
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                              <div className="p-3 bg-secondary/50 rounded-xl">
+                                <p className="text-xs text-muted-foreground">Méthode</p>
+                                <p className="text-sm font-medium text-foreground">
+                                  {pr.payment_method === "wave" ? "📱 Wave" : pr.payment_method === "orange_money" ? "📱 Orange Money" : "💵 Cash"}
+                                </p>
+                              </div>
+                              <div className="p-3 bg-secondary/50 rounded-xl">
+                                <p className="text-xs text-muted-foreground">Montant</p>
+                                <p className="text-sm font-medium text-foreground">{formatPrice(pr.amount)}</p>
+                              </div>
+                            </div>
+                            {pr.transaction_reference && (
+                              <p className="text-sm text-muted-foreground mb-3">
+                                📋 Réf: <span className="font-mono text-foreground">{pr.transaction_reference}</span>
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mb-4">
+                              Soumis le {new Date(pr.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                            <div className="flex gap-3">
+                              <Button
+                                className="flex-1 gap-2"
+                                onClick={() => handleApprovePayment(pr.id, pr.vendor_id)}
+                                disabled={updatePaymentRequest.isPending}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                Approuver & Renouveler
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="gap-2 text-destructive border-destructive"
+                                onClick={() => handleRejectPayment(pr.id)}
+                                disabled={updatePaymentRequest.isPending}
+                              >
+                                <XCircle className="h-4 w-4" />
+                                Rejeter
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentRequests.filter(p => p.status !== "pending").length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3 mt-6">
+                        📋 Historique
+                      </h3>
+                      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-secondary/50">
+                              <tr>
+                                <th className="text-left text-sm font-medium text-muted-foreground p-4">Vendeur</th>
+                                <th className="text-left text-sm font-medium text-muted-foreground p-4">Méthode</th>
+                                <th className="text-left text-sm font-medium text-muted-foreground p-4">Date</th>
+                                <th className="text-left text-sm font-medium text-muted-foreground p-4">Statut</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paymentRequests.filter(p => p.status !== "pending").map((pr) => (
+                                <tr key={pr.id} className="border-t border-border">
+                                  <td className="p-4 text-sm font-medium text-foreground">{(pr.vendor as any)?.shop_name || "Vendeur"}</td>
+                                  <td className="p-4 text-sm text-muted-foreground">
+                                    {pr.payment_method === "wave" ? "Wave" : pr.payment_method === "orange_money" ? "Orange Money" : "Cash"}
+                                  </td>
+                                  <td className="p-4 text-sm text-muted-foreground">{formatDate(pr.created_at)}</td>
+                                  <td className="p-4">
+                                    <span className={`px-2 py-1 text-xs rounded-full ${
+                                      pr.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                    }`}>
+                                      {pr.status === "approved" ? "Approuvé" : "Rejeté"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
