@@ -15,6 +15,11 @@ import {
   AlertCircle,
   Loader2,
   TrendingUp,
+  Wallet,
+  Send,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -33,14 +38,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useVendorPaymentRequests, useCreatePaymentRequest } from "@/hooks/usePaymentRequests";
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
   const { profile, vendorProfile, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<"produits" | "commandes" | "profil">("produits");
+  const [activeTab, setActiveTab] = useState<"produits" | "commandes" | "profil" | "abonnement">("produits");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>("wave");
+  const [transactionRef, setTransactionRef] = useState("");
 
   const { data: products = [], isLoading: productsLoading } = useVendorProducts(vendorProfile?.id);
   const { data: orders = [], isLoading: ordersLoading } = useVendorOrders(vendorProfile?.id);
@@ -48,6 +56,20 @@ const VendorDashboard = () => {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
   const updateOrderStatus = useUpdateOrderStatus();
+  const { data: paymentRequests = [], isLoading: paymentsLoading } = useVendorPaymentRequests(vendorProfile?.id);
+  const createPaymentRequest = useCreatePaymentRequest();
+
+  const hasPendingPayment = paymentRequests.some(p => p.status === "pending");
+
+  const handleSubmitPayment = async () => {
+    if (!vendorProfile) return;
+    await createPaymentRequest.mutateAsync({
+      vendorId: vendorProfile.id,
+      paymentMethod,
+      transactionReference: transactionRef || undefined,
+    });
+    setTransactionRef("");
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -190,9 +212,14 @@ const VendorDashboard = () => {
                   Votre abonnement a expiré. Vos produits ne sont plus visibles par les clients. 
                   Renouvelez votre abonnement (1 000 FCFA/mois) via Wave ou Orange Money pour réactiver votre boutique.
                 </p>
-                <p className="text-sm text-destructive/60 mt-2">
-                  📞 Contactez l'administration pour renouveler.
-                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-3 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => setActiveTab("abonnement")}
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Renouveler maintenant
+                </Button>
               </div>
             </div>
           </div>
@@ -266,6 +293,22 @@ const VendorDashboard = () => {
           >
             <Settings className="h-4 w-4 inline mr-2" />
             Mon profil
+          </button>
+          <button
+            onClick={() => setActiveTab("abonnement")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === "abonnement"
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            }`}
+          >
+            <Wallet className="h-4 w-4 inline mr-2" />
+            Abonnement
+            {hasPendingPayment && (
+              <span className="ml-2 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">
+                En cours
+              </span>
+            )}
           </button>
         </div>
 
@@ -572,10 +615,166 @@ const VendorDashboard = () => {
                 </div>
                 <BadgeCheck className={`h-8 w-8 ${subscriptionStatus.color.split(' ')[1]}`} />
               </div>
-              <p className="text-sm text-muted-foreground mt-4">
-                Renouvellement : 1 000 FCFA/mois via Wave ou Orange Money
-              </p>
+              {isSubscriptionExpired && (
+                <Button className="w-full mt-4 gap-2" onClick={() => setActiveTab("abonnement")}>
+                  <Wallet className="h-4 w-4" />
+                  Renouveler mon abonnement
+                </Button>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Abonnement Tab */}
+        {activeTab === "abonnement" && (
+          <div className="max-w-xl space-y-6">
+            {/* Current status */}
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                État de votre abonnement
+              </h2>
+              <div className={`flex items-center justify-between p-4 rounded-xl ${subscriptionStatus.color.replace('text-', 'bg-').split(' ')[0]}/20`}>
+                <div>
+                  <p className={`font-medium ${subscriptionStatus.color.split(' ')[1]}`}>
+                    {subscriptionStatus.label}
+                  </p>
+                  {vendorProfile?.subscription_end_date && (
+                    <p className={`text-sm ${subscriptionStatus.color.split(' ')[1]}/80`}>
+                      Expire le {new Date(vendorProfile.subscription_end_date).toLocaleDateString("fr-FR")}
+                    </p>
+                  )}
+                </div>
+                <BadgeCheck className={`h-8 w-8 ${subscriptionStatus.color.split(' ')[1]}`} />
+              </div>
+            </div>
+
+            {/* Payment instructions */}
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                💳 Payer l'abonnement (1 000 FCFA/mois)
+              </h2>
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">W</div>
+                    <div>
+                      <p className="font-semibold text-foreground">Wave</p>
+                      <p className="text-sm text-muted-foreground">Envoyez 1 000 FCFA au :</p>
+                    </div>
+                  </div>
+                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 XX XX XX XX</p>
+                </div>
+
+                <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm">OM</div>
+                    <div>
+                      <p className="font-semibold text-foreground">Orange Money</p>
+                      <p className="text-sm text-muted-foreground">Envoyez 1 000 FCFA au :</p>
+                    </div>
+                  </div>
+                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 XX XX XX XX</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit payment request */}
+            <div className="bg-card rounded-2xl border border-border p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                <Send className="h-5 w-5 inline mr-2" />
+                Confirmer votre paiement
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Après avoir effectué le paiement, remplissez ce formulaire pour que l'admin puisse vérifier et activer votre abonnement.
+              </p>
+
+              {hasPendingPayment ? (
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <div className="flex items-center gap-2 text-amber-700">
+                    <Clock className="h-5 w-5" />
+                    <p className="font-medium">Demande en cours de vérification</p>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-1">
+                    Votre demande de paiement est en attente de confirmation par l'administration.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">
+                      Méthode de paiement
+                    </label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="wave">Wave</option>
+                      <option value="orange_money">Orange Money</option>
+                      <option value="cash">Cash (en main propre)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">
+                      Référence de transaction (optionnel)
+                    </label>
+                    <input
+                      type="text"
+                      value={transactionRef}
+                      onChange={(e) => setTransactionRef(e.target.value)}
+                      placeholder="Ex: ID de transaction Wave/OM"
+                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleSubmitPayment}
+                    disabled={createPaymentRequest.isPending}
+                  >
+                    {createPaymentRequest.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Envoyer la demande de renouvellement
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Payment history */}
+            {paymentRequests.length > 0 && (
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <h2 className="text-lg font-semibold text-foreground mb-4">
+                  📋 Historique des demandes
+                </h2>
+                <div className="space-y-3">
+                  {paymentRequests.map((pr) => (
+                    <div key={pr.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {pr.payment_method === "wave" ? "Wave" : pr.payment_method === "orange_money" ? "Orange Money" : "Cash"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(pr.created_at).toLocaleDateString("fr-FR")}
+                          {pr.transaction_reference && ` • Réf: ${pr.transaction_reference}`}
+                        </p>
+                        {pr.admin_note && (
+                          <p className="text-xs text-muted-foreground mt-1">Note: {pr.admin_note}</p>
+                        )}
+                      </div>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        pr.status === "pending" ? "bg-amber-100 text-amber-700" :
+                        pr.status === "approved" ? "bg-green-100 text-green-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {pr.status === "pending" ? "En attente" : pr.status === "approved" ? "Approuvé" : "Rejeté"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
