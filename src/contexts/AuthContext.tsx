@@ -39,23 +39,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserData = async (userId: string) => {
     setDataLoading(true);
+    
+    // Safety timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.warn('fetchUserData timed out after 10s');
+      setDataLoading(false);
+    }, 10000);
+    
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Fetch profile and roles in parallel
+      const [profileResult, rolesResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_roles').select('role').eq('user_id', userId),
+      ]);
       
-      setProfile(profileData as Profile | null);
-
-      // Fetch roles
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
+      setProfile(profileResult.data as Profile | null);
       
-      const userRoles = (rolesData || []).map(r => r.role as AppRole);
+      const userRoles = (rolesResult.data || []).map(r => r.role as AppRole);
       setRoles(userRoles);
 
       // Fetch vendor profile if user is vendor
@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
+      clearTimeout(timeout);
       setDataLoading(false);
     }
   };
