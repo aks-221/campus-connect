@@ -662,7 +662,7 @@ const VendorDashboard = () => {
                       <p className="text-sm text-muted-foreground">Envoyez 1 000 FCFA au :</p>
                     </div>
                   </div>
-                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 XX XX XX XX</p>
+                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 77 817 75 75</p>
                 </div>
 
                 <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
@@ -673,7 +673,7 @@ const VendorDashboard = () => {
                       <p className="text-sm text-muted-foreground">Envoyez 1 000 FCFA au :</p>
                     </div>
                   </div>
-                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 XX XX XX XX</p>
+                  <p className="text-lg font-bold text-foreground ml-13 pl-[52px]">+227 77 817 75 75</p>
                 </div>
               </div>
             </div>
