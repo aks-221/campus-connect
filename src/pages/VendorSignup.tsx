@@ -197,7 +197,7 @@ const VendorSignup = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  Pavillon
+                  Batiment
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -205,7 +205,7 @@ const VendorSignup = () => {
                     type="text"
                     value={formData.pavilion}
                     onChange={(e) => setFormData({ ...formData, pavilion: e.target.value })}
-                    placeholder="Pavillon A"
+                    placeholder="Batiment 7"
                     required
                     className="w-full h-12 pl-10 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
