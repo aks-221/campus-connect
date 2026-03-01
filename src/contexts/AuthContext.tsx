@@ -37,43 +37,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
 
+  const withTimeout = <T,>(promise: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${timeoutMs / 1000}s`));
+      }, timeoutMs);
+
+      Promise.resolve(promise)
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  };
+
   const fetchUserData = async (userId: string) => {
     setDataLoading(true);
-    
-    // Safety timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      console.warn('fetchUserData timed out after 10s');
-      setDataLoading(false);
-    }, 10000);
-    
+
     try {
-      // Fetch profile and roles in parallel
-      const [profileResult, rolesResult] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_roles').select('role').eq('user_id', userId),
-      ]);
-      
+      const [profileResult, rolesResult] = await withTimeout<any>(
+        Promise.all([
+          supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+          supabase.from('user_roles').select('role').eq('user_id', userId),
+        ]),
+        10000,
+        'fetchUserData'
+      );
+
       setProfile(profileResult.data as Profile | null);
-      
-      const userRoles = (rolesResult.data || []).map(r => r.role as AppRole);
+
+      const userRoles = (rolesResult.data || []).map((r: { role: AppRole }) => r.role as AppRole);
       setRoles(userRoles);
 
-      // Fetch vendor profile if user is vendor
       if (userRoles.includes('vendor')) {
-        const { data: vendorData } = await supabase
-          .from('vendor_profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-        
-        setVendorProfile(vendorData as VendorProfile | null);
+        const vendorResult = await withTimeout<any>(
+          supabase
+            .from('vendor_profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle(),
+          7000,
+          'fetchVendorProfile'
+        );
+
+        setVendorProfile(vendorResult?.data as VendorProfile | null);
       } else {
         setVendorProfile(null);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setProfile(null);
+      setRoles([]);
+      setVendorProfile(null);
     } finally {
-      clearTimeout(timeout);
       setDataLoading(false);
     }
   };
@@ -85,17 +105,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let initialSessionHandled = false;
-
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         // Skip if this is the INITIAL_SESSION event — we handle it via getSession
         if (event === 'INITIAL_SESSION') return;
-        
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
-        
+
         if (newSession?.user) {
           await fetchUserData(newSession.user.id);
         } else {
@@ -109,7 +127,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Then check initial session
     supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
-      initialSessionHandled = true;
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
