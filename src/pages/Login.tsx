@@ -189,12 +189,12 @@ const Login = () => {
 
           {/* Toggle */}
           <p className="text-center text-sm text-muted-foreground mt-6">
-            {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}{" "}
+            {isLogin ? "Pas encore de compte client ?" : "Déjà un compte ?"}{" "}
             <button
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary font-medium hover:underline"
             >
-              {isLogin ? "S'inscrire" : "Se connecter"}
+              {isLogin ? "S'inscrire pour commander" : "Se connecter"}
             </button>
           </p>
 
@@ -204,7 +204,7 @@ const Login = () => {
               Vous voulez vendre vos produits ?
             </p>
             <Link to="/inscription-vendeur">
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2 bg-sky text-white border-sky hover:bg-sky-light hover:border-sky-light">
                 Devenir vendeur
               </Button>
             </Link>
