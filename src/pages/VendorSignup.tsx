@@ -116,7 +116,20 @@ const VendorSignup = () => {
               <p className="text-xs text-muted-foreground">Espace Vendeur</p>
             </div>
           </Link>
-
+          {/* Mobile Pricing Banner - visible only on mobile */}
+          <div className="lg:hidden flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-6">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎉</span>
+              <div>
+                <p className="text-sm font-bold text-primary">1er mois GRATUIT !</p>
+                <p className="text-xs text-muted-foreground">puis 1 000 FCFA/mois</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">✅ Sans commission</p>
+              <p className="text-xs text-muted-foreground">📦 Produits illimités</p>
+            </div>
+          </div>
           {/* Title */}
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">
             Devenir vendeur
@@ -255,7 +268,7 @@ const VendorSignup = () => {
             </div>
 
             {/* Terms */}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-primary font-medium hover:underline">
               En vous inscrivant, vous acceptez nos conditions d'utilisation. 
               L'abonnement est de 1 000 FCFA/mois après le 1er mois gratuit.
             </p>
