@@ -89,6 +89,19 @@ export const useVendorSignup = () => {
         // Don't fail the whole process if role already exists
       }
 
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (signInError) {
+        console.error('Auto-login error:', signInError);
+        return { 
+          success: true, 
+          error: "Compte créé mais connexion automatique échouée. Veuillez vous connecter." 
+        };
+      }
+
       return { success: true };
     },
     onSuccess: (result) => {

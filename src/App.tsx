@@ -19,6 +19,7 @@ import Favorites from "./pages/Favorites";
 import Categories from "./pages/Categories";
 import MyOrders from "./pages/MyOrders";
 import NotFound from "./pages/NotFound";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +41,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/produits" element={<Products />} />
