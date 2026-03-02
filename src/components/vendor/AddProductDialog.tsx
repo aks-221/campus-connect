@@ -118,6 +118,12 @@ export const AddProductDialog = ({
   };
 
   const onSubmit = async (data: ProductFormData) => {
+    // Require image for new products
+    if (!editProduct && !imageFile) {
+      toast.error("Veuillez ajouter une image pour le produit");
+      return;
+    }
+
     setUploading(true);
 
     try {

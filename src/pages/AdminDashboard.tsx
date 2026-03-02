@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAllPaymentRequests, useUpdatePaymentRequest } from "@/hooks/usePaymentRequests";
 
-type Tab = "apercu" | "vendeurs" | "produits" | "commandes" | "paiements";
+type Tab = "apercu" | "utilisateurs" | "vendeurs" | "produits" | "commandes" | "paiements";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -56,6 +56,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<Tab>("apercu");
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: vendors = [], isLoading: vendorsLoading } = useAllVendors();
@@ -153,6 +155,36 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
+    setDeletingUser(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ user_id: deleteUserId }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+      toast.success("Utilisateur supprimé");
+      queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la suppression");
+    } finally {
+      setDeletingUser(false);
+      setDeleteUserId(null);
+    }
+  };
+
   const filteredVendors = vendors.filter(
     (v) =>
       v.shop_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -165,6 +197,7 @@ const AdminDashboard = () => {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "apercu", label: "Aperçu", icon: <BarChart3 className="h-4 w-4" /> },
+    { id: "utilisateurs", label: "Utilisateurs", icon: <Users className="h-4 w-4" /> },
     { id: "vendeurs", label: "Vendeurs", icon: <Store className="h-4 w-4" /> },
     { id: "produits", label: "Produits", icon: <Package className="h-4 w-4" /> },
     { id: "commandes", label: "Commandes", icon: <ShoppingCart className="h-4 w-4" /> },
@@ -227,12 +260,12 @@ const AdminDashboard = () => {
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
-        <header className="sticky top-0 z-50 bg-card border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="md:hidden">
+        <header className="sticky top-0 z-50 bg-card border-b border-border px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="md:hidden flex items-center gap-2 shrink-0">
               <Link to="/" className="flex items-center gap-2">
                 <img src={uamLogo} alt="UAM" className="h-8 w-auto" />
-                <span className="font-bold text-primary">Admin</span>
+                <span className="font-bold text-primary text-sm">Admin</span>
               </Link>
             </div>
             <div className="hidden md:block">
@@ -240,36 +273,42 @@ const AdminDashboard = () => {
                 {tabs.find((t) => t.id === activeTab)?.label}
               </h1>
             </div>
-            <div className="relative w-64">
+            <div className="relative flex-1 max-w-xs md:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher..."
-                className="w-full h-10 pl-10 pr-4 rounded-xl bg-secondary border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-9 md:h-10 pl-9 pr-3 rounded-xl bg-secondary border-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
 
-          <div className="md:hidden flex gap-2 overflow-x-auto mt-4 pb-2">
+          <div className="md:hidden flex gap-1.5 overflow-x-auto mt-3 pb-1 -mx-1 px-1 scrollbar-none">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground"
                 }`}
               >
+                {tab.icon}
                 {tab.label}
+                {tab.badge && tab.badge > 0 ? (
+                  <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full leading-none">
+                    {tab.badge}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
         </header>
 
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           {/* Aperçu */}
           {activeTab === "apercu" && (
             <div className="space-y-6">
@@ -279,33 +318,33 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
-                      <Store className="h-8 w-8 text-primary mb-3" />
-                      <p className="text-3xl font-bold text-foreground">{stats?.totalVendors}</p>
-                      <p className="text-sm text-muted-foreground">Vendeurs</p>
-                    </div>
-                    <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
-                      <Users className="h-8 w-8 text-accent mb-3" />
-                      <p className="text-3xl font-bold text-foreground">{stats?.totalClients}</p>
-                      <p className="text-sm text-muted-foreground">Utilisateurs</p>
-                    </div>
-                    <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
-                      <Package className="h-8 w-8 text-primary mb-3" />
-                      <p className="text-3xl font-bold text-foreground">{stats?.totalProducts}</p>
-                      <p className="text-sm text-muted-foreground">Produits</p>
-                    </div>
-                    <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
-                      <ShoppingCart className="h-8 w-8 text-green-500 mb-3" />
-                      <p className="text-3xl font-bold text-foreground">{stats?.totalOrders}</p>
-                      <p className="text-sm text-muted-foreground">Commandes</p>
-                    </div>
-                  </div>
+                   <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+                     <div className="bg-card rounded-2xl p-4 md:p-6 border border-border shadow-card">
+                       <Store className="h-6 w-6 md:h-8 md:w-8 text-primary mb-2 md:mb-3" />
+                       <p className="text-2xl md:text-3xl font-bold text-foreground">{stats?.totalVendors}</p>
+                       <p className="text-xs md:text-sm text-muted-foreground">Vendeurs</p>
+                     </div>
+                     <div className="bg-card rounded-2xl p-4 md:p-6 border border-border shadow-card">
+                       <Users className="h-6 w-6 md:h-8 md:w-8 text-accent mb-2 md:mb-3" />
+                       <p className="text-2xl md:text-3xl font-bold text-foreground">{stats?.totalClients}</p>
+                       <p className="text-xs md:text-sm text-muted-foreground">Utilisateurs</p>
+                     </div>
+                     <div className="bg-card rounded-2xl p-4 md:p-6 border border-border shadow-card">
+                       <Package className="h-6 w-6 md:h-8 md:w-8 text-primary mb-2 md:mb-3" />
+                       <p className="text-2xl md:text-3xl font-bold text-foreground">{stats?.totalProducts}</p>
+                       <p className="text-xs md:text-sm text-muted-foreground">Produits</p>
+                     </div>
+                     <div className="bg-card rounded-2xl p-4 md:p-6 border border-border shadow-card">
+                       <ShoppingCart className="h-6 w-6 md:h-8 md:w-8 text-green-500 mb-2 md:mb-3" />
+                       <p className="text-2xl md:text-3xl font-bold text-foreground">{stats?.totalOrders}</p>
+                       <p className="text-xs md:text-sm text-muted-foreground">Commandes</p>
+                     </div>
+                   </div>
 
                   {/* Subscription stats */}
-                  <div className="bg-card rounded-2xl p-6 border border-border shadow-card">
+                   <div className="bg-card rounded-2xl p-4 md:p-6 border border-border shadow-card">
                     <h3 className="font-semibold text-foreground mb-4">💰 Abonnements vendeurs</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-2 md:gap-4">
                       <div className="p-4 bg-green-50 rounded-xl">
                         <p className="text-sm text-green-600">Actifs</p>
                         <p className="text-2xl font-bold text-green-700">
@@ -428,6 +467,82 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {/* Utilisateurs */}
+          {activeTab === "utilisateurs" && (
+            <div className="space-y-4">
+              {profiles.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Aucun utilisateur</p>
+                </div>
+              ) : (
+                <>
+                  {/* Mobile: cards */}
+                  <div className="md:hidden space-y-3">
+                    {profiles.filter(p => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email?.toLowerCase().includes(searchQuery.toLowerCase())).map((profile) => (
+                      <div key={profile.id} className="bg-card rounded-2xl border border-border p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                              {profile.full_name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{profile.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{profile.email}</p>
+                              {profile.phone && <p className="text-xs text-muted-foreground">{profile.phone}</p>}
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="text-destructive shrink-0 h-8 w-8" onClick={() => setDeleteUserId(profile.user_id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop: table */}
+                  <div className="hidden md:block bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-secondary/50">
+                          <tr>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Nom</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Email</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Téléphone</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Inscrit le</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {profiles.filter(p => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email?.toLowerCase().includes(searchQuery.toLowerCase())).map((profile) => (
+                            <tr key={profile.id} className="border-t border-border">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                    {profile.full_name.charAt(0)}
+                                  </div>
+                                  <span className="font-medium text-foreground">{profile.full_name}</span>
+                                </div>
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">{profile.email}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{profile.phone || "—"}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{formatDate(profile.created_at)}</td>
+                              <td className="p-4">
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteUserId(profile.user_id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Vendeurs */}
           {activeTab === "vendeurs" && (
             <div className="space-y-4">
@@ -435,114 +550,130 @@ const AdminDashboard = () => {
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
+              ) : filteredVendors.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                  <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Aucun vendeur trouvé</p>
+                </div>
               ) : (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-secondary/50">
-                        <tr>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Vendeur</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Contact</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Localisation</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Abonnement</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredVendors.map((vendor) => (
-                          <tr key={vendor.id} className="border-t border-border">
-                            <td className="p-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                  {vendor.shop_name.charAt(0)}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-foreground">{vendor.shop_name}</span>
-                                    {vendor.is_verified && <BadgeCheck className="h-4 w-4 text-accent" />}
+                <>
+                  {/* Mobile: cards */}
+                  <div className="md:hidden space-y-3">
+                    {filteredVendors.map((vendor) => (
+                      <div key={vendor.id} className="bg-card rounded-2xl border border-border p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                              {vendor.shop_name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-foreground text-sm">{vendor.shop_name}</span>
+                                {vendor.is_verified && <BadgeCheck className="h-4 w-4 text-accent" />}
+                              </div>
+                              <p className="text-xs text-muted-foreground">{vendor.phone}</p>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-1 text-[10px] rounded-full shrink-0 ${
+                              vendor.subscription_status === "active"
+                                ? "bg-green-100 text-green-700"
+                                : vendor.subscription_status === "trial"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {vendor.subscription_status === "active" ? "Actif" : vendor.subscription_status === "trial" ? "Essai" : vendor.subscription_status === "expired" ? "Expiré" : "Suspendu"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">📍 {vendor.pavilion}, {vendor.room}</p>
+                        <div className="flex gap-1.5">
+                          {!vendor.is_verified ? (
+                            <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={() => handleVerifyVendor(vendor.id, true)} disabled={updateVendorStatus.isPending}>
+                              <CheckCircle className="h-3.5 w-3.5 text-green-500" /> Vérifier
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={() => handleVerifyVendor(vendor.id, false)} disabled={updateVendorStatus.isPending}>
+                              <XCircle className="h-3.5 w-3.5 text-amber-500" /> Retirer
+                            </Button>
+                          )}
+                          {(vendor.subscription_status === "expired" || vendor.subscription_status === "suspended") && (
+                            <Button variant="outline" size="sm" className="text-xs gap-1 h-8" onClick={() => handleRenewSubscription(vendor.id)} disabled={updateVendorStatus.isPending}>
+                              <TrendingUp className="h-3.5 w-3.5 text-green-500" /> Renouveler
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm" className="text-xs gap-1 h-8 text-destructive" onClick={() => handleSuspendVendor(vendor.id)} disabled={updateVendorStatus.isPending}>
+                            <Ban className="h-3.5 w-3.5" /> Suspendre
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop: table */}
+                  <div className="hidden md:block bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-secondary/50">
+                          <tr>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Vendeur</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Contact</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Localisation</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Abonnement</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredVendors.map((vendor) => (
+                            <tr key={vendor.id} className="border-t border-border">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                    {vendor.shop_name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-foreground">{vendor.shop_name}</span>
+                                      {vendor.is_verified && <BadgeCheck className="h-4 w-4 text-accent" />}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="p-4 text-sm text-muted-foreground">{vendor.phone}</td>
-                            <td className="p-4 text-sm text-muted-foreground">
-                              {vendor.pavilion}, {vendor.room}
-                            </td>
-                            <td className="p-4">
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  vendor.subscription_status === "active"
-                                    ? "bg-green-100 text-green-700"
-                                    : vendor.subscription_status === "trial"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {vendor.subscription_status === "active"
-                                  ? "Actif"
-                                  : vendor.subscription_status === "trial"
-                                  ? "Essai"
-                                  : vendor.subscription_status === "expired"
-                                  ? "Expiré"
-                                  : "Suspendu"}
-                              </span>
-                            </td>
-                            <td className="p-4">
-                              <div className="flex gap-1">
-                                {!vendor.is_verified ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleVerifyVendor(vendor.id, true)}
-                                    disabled={updateVendorStatus.isPending}
-                                  >
-                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">{vendor.phone}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{vendor.pavilion}, {vendor.room}</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-1 text-xs rounded-full ${vendor.subscription_status === "active" ? "bg-green-100 text-green-700" : vendor.subscription_status === "trial" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                                  {vendor.subscription_status === "active" ? "Actif" : vendor.subscription_status === "trial" ? "Essai" : vendor.subscription_status === "expired" ? "Expiré" : "Suspendu"}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-1">
+                                  {!vendor.is_verified ? (
+                                    <Button variant="ghost" size="icon" onClick={() => handleVerifyVendor(vendor.id, true)} disabled={updateVendorStatus.isPending}>
+                                      <CheckCircle className="h-4 w-4 text-green-500" />
+                                    </Button>
+                                  ) : (
+                                    <Button variant="ghost" size="icon" onClick={() => handleVerifyVendor(vendor.id, false)} disabled={updateVendorStatus.isPending}>
+                                      <XCircle className="h-4 w-4 text-amber-500" />
+                                    </Button>
+                                  )}
+                                  {(vendor.subscription_status === "expired" || vendor.subscription_status === "suspended") && (
+                                    <Button variant="ghost" size="icon" title="Renouveler" onClick={() => handleRenewSubscription(vendor.id)} disabled={updateVendorStatus.isPending}>
+                                      <TrendingUp className="h-4 w-4 text-green-500" />
+                                    </Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" title="Suspendre" onClick={() => handleSuspendVendor(vendor.id)} disabled={updateVendorStatus.isPending}>
+                                    <Ban className="h-4 w-4 text-destructive" />
                                   </Button>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleVerifyVendor(vendor.id, false)}
-                                    disabled={updateVendorStatus.isPending}
-                                  >
-                                    <XCircle className="h-4 w-4 text-amber-500" />
-                                  </Button>
-                                )}
-                                {(vendor.subscription_status === "expired" || vendor.subscription_status === "suspended") && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    title="Renouveler l'abonnement (30 jours)"
-                                    onClick={() => handleRenewSubscription(vendor.id)}
-                                    disabled={updateVendorStatus.isPending}
-                                  >
-                                    <TrendingUp className="h-4 w-4 text-green-500" />
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  title="Suspendre"
-                                  onClick={() => handleSuspendVendor(vendor.id)}
-                                  disabled={updateVendorStatus.isPending}
-                                >
-                                  <Ban className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredVendors.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                              Aucun vendeur trouvé
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}
@@ -555,68 +686,89 @@ const AdminDashboard = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-secondary/50">
-                        <tr>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Produit</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Vendeur</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Prix</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Stock</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Statut</th>
-                          <th className="text-left text-sm font-medium text-muted-foreground p-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProducts.map((product) => (
-                          <tr key={product.id} className="border-t border-border">
-                            <td className="p-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary">
-                                  <img src={product.image_url || "/placeholder.svg"} alt="" className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-foreground line-clamp-1">{product.name}</p>
-                                  <p className="text-xs text-muted-foreground">{product.category?.name}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4 text-sm text-muted-foreground">{product.vendor?.shop_name}</td>
-                            <td className="p-4 text-sm font-semibold text-primary">{formatPrice(product.price)}</td>
-                            <td className="p-4 text-sm text-muted-foreground">{product.stock}</td>
-                            <td className="p-4">
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  product.is_available && product.stock > 0
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {product.is_available && product.stock > 0 ? "Disponible" : "Indisponible"}
+                <div>
+                  {/* Mobile: cards */}
+                  <div className="md:hidden space-y-3">
+                    {filteredProducts.length === 0 ? (
+                      <div className="text-center py-12 bg-card rounded-2xl border border-border">
+                        <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">Aucun produit trouvé</p>
+                      </div>
+                    ) : filteredProducts.map((product) => (
+                      <div key={product.id} className="bg-card rounded-2xl border border-border p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-secondary shrink-0">
+                            <img src={product.image_url || "/placeholder.svg"} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm line-clamp-1">{product.name}</p>
+                            <p className="text-xs text-muted-foreground">{product.vendor?.shop_name} • {product.category?.name}</p>
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <span className="text-sm font-semibold text-primary">{formatPrice(product.price)}</span>
+                              <span className="text-xs text-muted-foreground">Stock: {product.stock}</span>
+                              <span className={`px-1.5 py-0.5 text-[10px] rounded-full ${product.is_available && product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                {product.is_available && product.stock > 0 ? "Dispo" : "Indispo"}
                               </span>
-                            </td>
-                            <td className="p-4">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => setDeleteProductId(product.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                        {filteredProducts.length === 0 && (
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="text-destructive shrink-0 h-8 w-8" onClick={() => setDeleteProductId(product.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop: table */}
+                  <div className="hidden md:block bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-secondary/50">
                           <tr>
-                            <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                              Aucun produit trouvé
-                            </td>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Produit</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Vendeur</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Prix</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Stock</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Statut</th>
+                            <th className="text-left text-sm font-medium text-muted-foreground p-4">Actions</th>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.map((product) => (
+                            <tr key={product.id} className="border-t border-border">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary">
+                                    <img src={product.image_url || "/placeholder.svg"} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-foreground line-clamp-1">{product.name}</p>
+                                    <p className="text-xs text-muted-foreground">{product.category?.name}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">{product.vendor?.shop_name}</td>
+                              <td className="p-4 text-sm font-semibold text-primary">{formatPrice(product.price)}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{product.stock}</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-1 text-xs rounded-full ${product.is_available && product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {product.is_available && product.stock > 0 ? "Disponible" : "Indisponible"}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeleteProductId(product.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                          {filteredProducts.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="p-8 text-center text-muted-foreground">Aucun produit trouvé</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -637,15 +789,15 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 orders.map((order) => (
-                  <div key={order.id} className="bg-card rounded-2xl border border-border p-6">
-                    <div className="flex items-start justify-between mb-4">
+                  <div key={order.id} className="bg-card rounded-2xl border border-border p-4 md:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3 md:mb-4">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">
+                        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                          <h3 className="font-semibold text-foreground text-sm md:text-base">
                             {order.client?.full_name || "Client"}
                           </h3>
                           <span className="text-xs text-muted-foreground">→</span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs md:text-sm text-muted-foreground">
                             {order.vendor?.shop_name || "Vendeur"}
                           </span>
                           <span
@@ -662,14 +814,14 @@ const AdminDashboard = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">{formatDate(order.created_at)}</p>
                       </div>
-                      <p className="text-lg font-bold text-primary">{formatPrice(order.total_amount)}</p>
+                      <p className="text-base md:text-lg font-bold text-primary">{formatPrice(order.total_amount)}</p>
                     </div>
                     {order.items && order.items.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5 md:space-y-2">
                         {order.items.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl text-sm">
-                            <span className="text-foreground">{item.product?.name || "Produit"}</span>
-                            <span className="text-muted-foreground">
+                          <div key={item.id} className="flex items-center justify-between p-2.5 md:p-3 bg-secondary/50 rounded-xl text-xs md:text-sm">
+                            <span className="text-foreground truncate mr-2">{item.product?.name || "Produit"}</span>
+                            <span className="text-muted-foreground whitespace-nowrap">
                               {item.quantity} × {formatPrice(item.unit_price)}
                             </span>
                           </div>
@@ -706,21 +858,21 @@ const AdminDashboard = () => {
                       </h3>
                       <div className="space-y-3">
                         {pendingPayments.map((pr) => (
-                          <div key={pr.id} className="bg-card rounded-2xl border-2 border-amber-300 p-5">
+                          <div key={pr.id} className="bg-card rounded-2xl border-2 border-amber-300 p-4 md:p-5">
                             <div className="flex items-start justify-between mb-3">
                               <div>
-                                <p className="font-semibold text-foreground text-lg">
+                                <p className="font-semibold text-foreground text-base md:text-lg">
                                   {(pr.vendor as any)?.shop_name || "Vendeur"}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                   {(pr.vendor as any)?.phone}
                                 </p>
                               </div>
-                              <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full font-medium">
+                              <span className="px-2 md:px-3 py-1 bg-amber-100 text-amber-700 text-xs md:text-sm rounded-full font-medium">
                                 En attente
                               </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
                               <div className="p-3 bg-secondary/50 rounded-xl">
                                 <p className="text-xs text-muted-foreground">Méthode</p>
                                 <p className="text-sm font-medium text-foreground">
@@ -740,9 +892,10 @@ const AdminDashboard = () => {
                             <p className="text-xs text-muted-foreground mb-4">
                               Soumis le {new Date(pr.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                             </p>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                               <Button
-                                className="flex-1 gap-2"
+                                className="flex-1 gap-2 text-xs md:text-sm"
+                                size="sm"
                                 onClick={() => handleApprovePayment(pr.id, pr.vendor_id)}
                                 disabled={updatePaymentRequest.isPending}
                               >
@@ -751,7 +904,8 @@ const AdminDashboard = () => {
                               </Button>
                               <Button
                                 variant="outline"
-                                className="gap-2 text-destructive border-destructive"
+                                size="sm"
+                                className="gap-2 text-destructive border-destructive text-xs md:text-sm"
                                 onClick={() => handleRejectPayment(pr.id)}
                                 disabled={updatePaymentRequest.isPending}
                               >
@@ -809,6 +963,26 @@ const AdminDashboard = () => {
             </div>
           )}
         </main>
+
+        {/* Mobile bottom bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 flex gap-2 z-50">
+          <Link to="/" className="flex-1">
+            <Button variant="outline" className="w-full gap-2 text-xs h-10">
+              <Home className="h-4 w-4" />
+              Retour boutique
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            className="flex-1 gap-2 text-xs h-10 text-destructive border-destructive/30"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4" />
+            Déconnexion
+          </Button>
+        </div>
+        {/* Spacer for mobile bottom bar */}
+        <div className="md:hidden h-16" />
       </div>
 
       {/* Delete product dialog */}
@@ -823,6 +997,29 @@ const AdminDashboard = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProduct} className="bg-destructive text-destructive-foreground">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete user dialog */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement le compte, le profil, les favoris et toutes les données associées. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingUser}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-destructive text-destructive-foreground"
+              disabled={deletingUser}
+            >
+              {deletingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
