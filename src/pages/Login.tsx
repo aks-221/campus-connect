@@ -17,11 +17,11 @@ const Login = () => {
     password: "",
   });
   const navigate = useNavigate();
-  const { signIn, signUp, user, isVendor, isAdmin, loading: authLoading } = useAuth();
+  const { signIn, signUp, user, isVendor, isAdmin, loading: authLoading, dataLoading } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && !dataLoading && user) {
       if (isAdmin) {
         navigate("/admin");
       } else if (isVendor) {
@@ -29,7 +29,7 @@ const Login = () => {
       } else {
         navigate("/");
       }
-    }
+  }
   }, [user, isVendor, isAdmin, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -10,6 +10,7 @@ interface AuthContextType {
   roles: AppRole[];
   vendorProfile: VendorProfile | null;
   loading: boolean;
+  dataLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -172,8 +173,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isVendor = roles.includes('vendor');
   const isAdmin = roles.includes('admin');
 
-  // Consider loading = true until both auth AND user data are loaded
-  const isLoading = loading || dataLoading;
 
   return (
     <AuthContext.Provider
@@ -183,7 +182,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         profile,
         roles,
         vendorProfile,
-        loading: isLoading,
+        loading,
+        dataLoading,
         signUp,
         signIn,
         signOut,
