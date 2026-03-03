@@ -64,7 +64,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           
           {/* Badge stock faible */}
           {product.stock <= 2 && product.stock > 0 && (
-            <span className="absolute top-3 left-3 px-2 py-1 text-[10px] font-medium rounded-full bg-destructive text-destructive-foreground">
+            <span className="absolute top-2 left-2 px-1.5 py-0.5 text-[8px] font-medium rounded-full bg-destructive text-destructive-foreground">
               Plus que {product.stock}
             </span>
           )}
@@ -75,46 +75,46 @@ const ProductCard = ({ product }: ProductCardProps) => {
               e.preventDefault();
               toast.success("Ajouté aux favoris");
             }}
-            className="absolute top-3 right-3 p-2 rounded-full bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-destructive transition-colors"
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-card/80 backdrop-blur-sm text-muted-foreground hover:text-destructive transition-colors"
           >
-            <Heart className="h-4 w-4" />
+            <Heart className="h-3 w-3" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-2">
           {/* Category */}
-          <span className="text-[10px] font-medium text-primary uppercase tracking-wider">
+          <span className="text-[8px] font-medium text-primary uppercase tracking-wider">
             {product.category}
           </span>
           
           {/* Name */}
-          <h3 className="font-medium text-foreground mt-1 line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="font-medium text-foreground mt-0.5 line-clamp-2 group-hover:text-primary transition-colors text-xs">
             {product.name}
           </h3>
           
           {/* Vendeur */}
-          <div className="flex items-center gap-1 mt-2">
-            <span className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-0.5 mt-0.5">
+            <span className="text-[8px] text-muted-foreground">
               par {product.vendorName}
             </span>
             {product.isVendeurVerified && (
-              <BadgeCheck className="h-3.5 w-3.5 text-accent" />
+              <BadgeCheck className="h-2.5 w-2.5 text-accent" />
             )}
           </div>
           
           {/* Price & Action */}
-          <div className="flex items-center justify-between mt-3">
-            <span className="text-lg font-bold text-primary">
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm font-bold text-primary">
               {formatPrice(product.price)}
             </span>
             <Button
               size="sm"
               variant="secondary"
               onClick={handleAddToCart}
-              className="h-8 px-3 gap-1"
+              className="h-6 px-1.5 gap-0.5"
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
+              <ShoppingCart className="h-2.5 w-2.5" />
             </Button>
           </div>
         </div>

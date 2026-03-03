@@ -144,18 +144,18 @@ const Index = () => {
           </Link>
         </div>
         {productsLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-3">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+            {[...Array(24)].map((_, i) => (
+              <div key={i} className="space-y-1">
                 <Skeleton className="aspect-square rounded-2xl" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-2 w-3/4" />
+                <Skeleton className="h-2 w-1/2" />
               </div>
             ))}
           </div>
         ) : availableProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {availableProducts.slice(0, 4).map((product) => (
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+            {availableProducts.slice(0, 24).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
