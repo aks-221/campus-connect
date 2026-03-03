@@ -85,9 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setProfile(null);
-      setRoles([]);
-      setVendorProfile(null);
     } finally {
       setDataLoading(false);
     }
@@ -108,9 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (newSession?.user) {
           await fetchUserData(newSession.user.id);
         } else {
-          setProfile(null);
-          setRoles([]);
-          setVendorProfile(null);
+          if (event === 'SIGNED_OUT') {
+            setProfile(null);
+            setRoles([]);
+            setVendorProfile(null);
+        }
         }
         setLoading(false);
       }
