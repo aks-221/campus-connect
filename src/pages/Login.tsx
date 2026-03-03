@@ -51,7 +51,12 @@ const Login = () => {
           setLoading(false);
           return;
         }
-        const { error } = await signUp(formData.email, formData.password, formData.name);
+        if (!formData.phone || formData.phone.trim().length < 8) {
+          toast.error("Le numéro de téléphone est obligatoire");
+          setLoading(false);
+          return;
+        }
+        const { error } = await signUp(formData.email, formData.password, formData.name, formData.phone);
         if (error) {
           toast.error(error.message || "Erreur lors de l'inscription");
         } else {
@@ -142,7 +147,7 @@ const Login = () => {
             {!isLogin && (
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">
-                  Téléphone (optionnel)
+                  Téléphone <span className="text-destructive">*</span>
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -151,6 +156,7 @@ const Login = () => {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+221 77 123 45 67"
+                    required
                     className="w-full h-12 pl-10 pr-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>

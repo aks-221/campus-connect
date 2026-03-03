@@ -57,7 +57,9 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
+  const [deletingOrder, setDeletingOrder] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: vendors = [], isLoading: vendorsLoading } = useAllVendors();
@@ -152,6 +154,27 @@ const AdminDashboard = () => {
     if (deleteProductId) {
       await deleteProduct.mutateAsync(deleteProductId);
       setDeleteProductId(null);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deleteOrderId) return;
+    setDeletingOrder(true);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', deleteOrderId);
+      
+      if (error) throw error;
+      
+      toast.success("Commande supprimée avec succès");
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setDeleteOrderId(null);
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la suppression de la commande");
+    } finally {
+      setDeletingOrder(false);
     }
   };
 
@@ -791,7 +814,7 @@ const AdminDashboard = () => {
                 orders.map((order) => (
                   <div key={order.id} className="bg-card rounded-2xl border border-border p-4 md:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3 md:mb-4">
-                      <div>
+                      <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                           <h3 className="font-semibold text-foreground text-sm md:text-base">
                             {order.client?.full_name || "Client"}
@@ -814,7 +837,17 @@ const AdminDashboard = () => {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">{formatDate(order.created_at)}</p>
                       </div>
-                      <p className="text-base md:text-lg font-bold text-primary">{formatPrice(order.total_amount)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-base md:text-lg font-bold text-primary">{formatPrice(order.total_amount)}</p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive shrink-0 h-8 w-8" 
+                          onClick={() => setDeleteOrderId(order.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     {order.items && order.items.length > 0 && (
                       <div className="space-y-1.5 md:space-y-2">
@@ -997,6 +1030,29 @@ const AdminDashboard = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteProduct} className="bg-destructive text-destructive-foreground">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete order dialog */}
+      <AlertDialog open={!!deleteOrderId} onOpenChange={() => setDeleteOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette commande ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement la commande et tous les éléments associés. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingOrder}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteOrder}
+              className="bg-destructive text-destructive-foreground"
+              disabled={deletingOrder}
+            >
+              {deletingOrder ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -190,7 +190,7 @@ export const AddProductDialog = ({
                   <img
                     src={imagePreview}
                     alt="Preview"
-                    className="w-full h-32 object-cover rounded-lg"
+                    className="w-full h-32 object-contain rounded-lg bg-secondary/20"
                   />
                 ) : (
                   <div className="py-4">
