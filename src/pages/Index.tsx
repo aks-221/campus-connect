@@ -9,10 +9,22 @@ import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Product } from "@/types";
 import { useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const { data: dbProducts = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: stats } = useQuery({
+    queryKey: ['home-stats'],
+    queryFn: async () => {
+       const { data } = await supabase.rpc('get_platform_stats');
+      return {
+        totalUsers: (data as any)?.total_users || 0,
+        totalVendors: (data as any)?.total_vendors || 0,
+      };
+    },
+  });
 
   // Transform database products to UI Product type
   const products: Product[] = useMemo(() => {
@@ -82,12 +94,12 @@ const Index = () => {
         <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto">
           <div className="bg-card rounded-2xl p-4 text-center shadow-card border border-border/50">
             <Users className="h-6 w-6 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">150+</p>
+            <p className="text-2xl font-bold text-foreground">{stats?.totalUsers || 0}</p>
             <p className="text-xs text-muted-foreground">Étudiants</p>
           </div>
           <div className="bg-card rounded-2xl p-4 text-center shadow-card border border-border/50">
             <Store className="h-6 w-6 text-primary mx-auto mb-2" />
-            <p className="text-2xl font-bold text-foreground">25</p>
+            <p className="text-2xl font-bold text-foreground">{stats?.totalVendors || 0}</p>
             <p className="text-xs text-muted-foreground">Vendeurs</p>
           </div>
           <div className="bg-card rounded-2xl p-4 text-center shadow-card border border-border/50">
