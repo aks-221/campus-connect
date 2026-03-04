@@ -50,11 +50,10 @@ export const useVendorOrders = (vendorId?: string) => {
       if (error) throw error;
       
       // Fetch client profiles separately
-      const clientIds = [...new Set(data.map(o => o.client_id))];
+      
+      const { data: user } = await supabase.auth.getUser();
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('user_id', clientIds);
+        .rpc('get_order_client_profiles', { _vendor_user_id: user.user?.id });
       
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
       

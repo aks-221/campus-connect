@@ -60,12 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setDataLoading(true);
 
     try {
-      // Tout en parallèle en une seule fois
-      const [profileResult, rolesResult, vendorResult] = await withTimeout<any>(
+      // Étape 1 : profile + roles seulement (rapide pour tout le monde)
+      const [profileResult, rolesResult] = await withTimeout<any>(
         Promise.all([
           supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
           supabase.from('user_roles').select('role').eq('user_id', userId),
-          supabase.from('vendor_profiles').select('*').eq('user_id', userId).maybeSingle(),
         ]),
         10000,
         'fetchUserData'
@@ -76,8 +75,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userRoles = (rolesResult.data || []).map((r: { role: AppRole }) => r.role as AppRole);
       setRoles(userRoles);
 
-      // vendorProfile disponible directement, pas besoin d'attendre
+      // Étape 2 : vendor_profiles SEULEMENT si vendeur
       if (userRoles.includes('vendor')) {
+        const vendorResult = await withTimeout<any>(
+          supabase.from('vendor_profiles').select('*').eq('user_id', userId).maybeSingle(),
+          7000,
+          'fetchVendorProfile'
+        );
         setVendorProfile(vendorResult?.data as VendorProfile | null);
       } else {
         setVendorProfile(null);
@@ -89,7 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setDataLoading(false);
     }
   };
-
   const refreshProfile = async () => {
     if (user) {
       await fetchUserData(user.id);
@@ -128,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: window.location.origin,
         data: {
           full_name: fullName,
-          phone: phone,
+          phone: phone?.trim() || null,
         },
       },
     });

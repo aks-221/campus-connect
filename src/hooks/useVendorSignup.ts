@@ -31,6 +31,7 @@ export const useVendorSignup = () => {
           emailRedirectTo: window.location.origin,
           data: {
             full_name: data.fullName,
+            phone: data.phone,
           },
         },
       });
@@ -45,20 +46,6 @@ export const useVendorSignup = () => {
 
       const userId = authData.user.id;
 
-      // 2. Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          full_name: data.fullName,
-          phone: data.phone,
-          email: data.email,
-        });
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        // Don't fail the whole process, profile might be auto-created by trigger
-      }
 
       // 3. Create vendor profile
       const { error: vendorError } = await supabase

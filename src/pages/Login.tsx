@@ -30,7 +30,7 @@ const Login = () => {
         navigate("/");
       }
   }
-  }, [user, isVendor, isAdmin, authLoading, navigate]);
+  }, [user, isVendor, isAdmin, authLoading, dataLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +72,7 @@ const Login = () => {
   };
 
   // Don't show login form if already logged in
-  if (!authLoading && user) {
+  if (!authLoading && !dataLoading && user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
