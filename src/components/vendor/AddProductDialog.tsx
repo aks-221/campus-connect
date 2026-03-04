@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -76,13 +76,38 @@ export const AddProductDialog = ({
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: editProduct?.name || "",
-      description: editProduct?.description || "",
-      price: editProduct?.price || 0,
-      stock: editProduct?.stock || 0,
-      category_id: editProduct?.category_id || undefined,
+      name: "",
+      description: "",
+      price: 0,
+      stock: 0,
+      category_id: undefined,
     },
   });
+
+  // Update form when editProduct changes
+  useEffect(() => {
+    if (editProduct) {
+      form.reset({
+        name: editProduct.name || "",
+        description: editProduct.description || "",
+        price: editProduct.price || 0,
+        stock: editProduct.stock || 0,
+        category_id: editProduct.category_id || undefined,
+      });
+      setImagePreview(editProduct.image_url || null);
+      setImageFile(null);
+    } else {
+      form.reset({
+        name: "",
+        description: "",
+        price: 0,
+        stock: 0,
+        category_id: undefined,
+      });
+      setImagePreview(null);
+      setImageFile(null);
+    }
+  }, [editProduct, form]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -217,7 +242,7 @@ export const AddProductDialog = ({
                 <FormItem>
                   <FormLabel>Nom du produit</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ex: Sandwich poulet" {...field} />
+                    <Input placeholder="Ex: Ventilateur" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
