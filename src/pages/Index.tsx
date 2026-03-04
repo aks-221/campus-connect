@@ -8,13 +8,14 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Product } from "@/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const { data: dbProducts = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const [displayCount, setDisplayCount] = useState(24);
   const { data: stats } = useQuery({
     queryKey: ['home-stats'],
     queryFn: async () => {
@@ -166,11 +167,26 @@ const Index = () => {
             ))}
           </div>
         ) : availableProducts.length > 0 ? (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-            {availableProducts.slice(0, 24).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+              {availableProducts.slice(0, displayCount).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            
+            {availableProducts.length > displayCount && (
+              <div className="text-center mt-8">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDisplayCount(prev => prev + 24)}
+                  className="gap-2"
+                >
+                  Voir plus de produits
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
