@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, Loader2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +7,8 @@ import { useCart } from "@/contexts/CartContext";
 import { useProduct } from "@/hooks/useProducts";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCreateOrder } from "@/hooks/useOrders";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const ProductDetail = () => {
@@ -16,6 +18,8 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(id || "");
   const { data: favorites = [] } = useFavorites(user?.id);
   const toggleFavorite = useToggleFavorite();
+  const createOrder = useCreateOrder();
+  const [isDirectOrdering, setIsDirectOrdering] = useState(false);
 
   const isFavorite = favorites.some(f => f.product_id === id);
 
@@ -95,15 +99,48 @@ const ProductDetail = () => {
     toggleFavorite.mutate({ userId: user.id, productId: product.id, isFavorite });
   };
 
-  const handleDirectOrder = () => {
+  const handleDirectOrder = async () => {
     if (!product.vendor?.phone) {
       toast.error("Numéro du vendeur non disponible");
       return;
     }
-    const message = encodeURIComponent(
-      `Bonjour ${product.vendor.shop_name}, je suis intéressé(e) par votre produit "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce.`
-    );
-    window.open(`https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`, "_blank");
+
+    if (!user) {
+      toast.error("Connectez-vous pour commander");
+      return;
+    }
+
+    if (!product.is_available || product.stock <= 0) {
+      toast.error("Ce produit est épuisé");
+      return;
+    }
+
+    setIsDirectOrdering(true);
+    try {
+      // Create order in database
+      await createOrder.mutateAsync({
+        clientId: user.id,
+        vendorId: product.vendor_id,
+        totalAmount: product.price,
+        items: [{
+          productId: product.id,
+          quantity: 1,
+          unitPrice: product.price,
+        }],
+      });
+
+      // Then open WhatsApp
+      const message = encodeURIComponent(
+        `Bonjour ${product.vendor.shop_name}, je viens de passer commande pour votre produit "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce.`
+      );
+      window.open(`https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`, "_blank");
+      
+      toast.success("Commande enregistrée avec succès !");
+    } catch (error) {
+      // Error handled by mutation
+    } finally {
+      setIsDirectOrdering(false);
+    }
   };
 
   return (
@@ -203,10 +240,15 @@ const ProductDetail = () => {
                 size="lg"
                 variant="outline"
                 onClick={handleDirectOrder}
+                disabled={isDirectOrdering || !product.is_available || product.stock <= 0}
                 className="flex-1 gap-2"
               >
-                <MessageCircle className="h-5 w-5" />
-                Commander directement
+                {isDirectOrdering ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-5 w-5" />
+                )}
+                {isDirectOrdering ? "Enregistrement..." : "Commander directement"}
               </Button>
             </div>
 
