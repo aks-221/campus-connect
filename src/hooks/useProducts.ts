@@ -108,6 +108,7 @@ export const useCreateProduct = () => {
       description?: string;
       price: number;
       image_url?: string;
+      image_url_2?: string;
       stock: number;
     }) => {
       const { data, error } = await supabase

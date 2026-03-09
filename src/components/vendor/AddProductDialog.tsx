@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
-import { Loader2, ImagePlus } from "lucide-react";
+import { Loader2, ImagePlus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -54,6 +54,7 @@ interface AddProductDialogProps {
     stock: number;
     category_id?: string | null;
     image_url?: string | null;
+    image_url_2?: string | null;
   } | null;
 }
 
@@ -63,9 +64,13 @@ export const AddProductDialog = ({
   vendorId,
   editProduct,
 }: AddProductDialogProps) => {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(
+  const [imageFile1, setImageFile1] = useState<File | null>(null);
+  const [imageFile2, setImageFile2] = useState<File | null>(null);
+  const [imagePreview1, setImagePreview1] = useState<string | null>(
     editProduct?.image_url || null
+  );
+  const [imagePreview2, setImagePreview2] = useState<string | null>(
+    editProduct?.image_url_2 || null
   );
   const [uploading, setUploading] = useState(false);
 
@@ -94,8 +99,10 @@ export const AddProductDialog = ({
         stock: editProduct.stock || 0,
         category_id: editProduct.category_id || undefined,
       });
-      setImagePreview(editProduct.image_url || null);
-      setImageFile(null);
+      setImagePreview1(editProduct.image_url || null);
+      setImagePreview2(editProduct.image_url_2 || null);
+      setImageFile1(null);
+      setImageFile2(null);
     } else {
       form.reset({
         name: "",
@@ -104,26 +111,38 @@ export const AddProductDialog = ({
         stock: 0,
         category_id: undefined,
       });
-      setImagePreview(null);
-      setImageFile(null);
+      setImagePreview1(null);
+      setImagePreview2(null);
+      setImageFile1(null);
+      setImageFile2(null);
     }
   }, [editProduct, form]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: 1 | 2) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
+      const setter = index === 1 ? setImageFile1 : setImageFile2;
+      const previewSetter = index === 1 ? setImagePreview1 : setImagePreview2;
+      setter(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
+      reader.onloadend = () => previewSetter(reader.result as string);
       reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    }
+  };
+  const removeImage = (index: 1 | 2) => {
+    if (index === 1) {
+      setImageFile1(null);
+      setImagePreview1(null);
+    } else {
+      setImageFile2(null);
+      setImagePreview2(null);
     }
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${vendorId}/${Date.now()}.${fileExt}`;
+    const fileName = `${vendorId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("product-images")
@@ -144,18 +163,25 @@ export const AddProductDialog = ({
 
   const onSubmit = async (data: ProductFormData) => {
     // Require image for new products
-    if (!editProduct && !imageFile) {
-      toast.error("Veuillez ajouter une image pour le produit");
-      return;
+    if (!editProduct && !imageFile1) {
+      toast.error("Veuillez ajouter au moins une image pour le produit");
+      return
     }
 
     setUploading(true);
 
     try {
-      let imageUrl = editProduct?.image_url || null;
-
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+      let imageUrl1 = editProduct?.image_url || null;
+      let imageUrl2 = editProduct?.image_url_2 || null;
+      if (imageFile1) {
+        imageUrl1 = await uploadImage(imageFile1);
+      }
+      if (imageFile2) {
+        imageUrl2 = await uploadImage(imageFile2);
+      }
+      // If image 2 was removed (no file and no preview)
+      if (!imagePreview2 && !imageFile2) {
+        imageUrl2 = null;
       }
 
       if (editProduct) {
@@ -166,7 +192,8 @@ export const AddProductDialog = ({
           price: data.price,
           stock: data.stock,
           category_id: data.category_id || null,
-          image_url: imageUrl,
+          image_url: imageUrl1,
+          image_url_2: imageUrl2,
         });
       } else {
         await createProduct.mutateAsync({
@@ -176,13 +203,16 @@ export const AddProductDialog = ({
           price: data.price,
           stock: data.stock,
           category_id: data.category_id,
-          image_url: imageUrl || undefined,
+          image_url: imageUrl1 || undefined,
+          image_url_2: imageUrl2 || undefined,
         });
       }
 
       form.reset();
-      setImageFile(null);
-      setImagePreview(null);
+      setImageFile1(null);
+      setImageFile2(null);
+      setImagePreview1(null);
+      setImagePreview2(null);
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving product:", error);
@@ -195,7 +225,7 @@ export const AddProductDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editProduct ? "Modifier le produit" : "Ajouter un produit"}
@@ -206,34 +236,82 @@ export const AddProductDialog = ({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Image Upload */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Image du produit</label>
-              <div
-                className="border-2 border-dashed border-border rounded-xl p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => document.getElementById("image-input")?.click()}
-              >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-32 object-contain rounded-lg bg-secondary/20"
+              <label className="text-sm font-medium">Images du produit (1-2)</label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Image 1 */}
+                <div
+                  className="border-2 border-dashed border-border rounded-xl p-2 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+                  onClick={() => document.getElementById("image-input-1")?.click()}
+                >
+                  {imagePreview1 ? (
+                    <>
+                      <img
+                        src={imagePreview1}
+                        alt="Face avant"
+                        className="w-full h-28 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeImage(1); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      <p className="text-[10px] text-muted-foreground mt-1">Face avant</p>
+                    </>
+                  ) : (
+                    <div className="py-4">
+                      <ImagePlus className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
+                      <p className="text-[10px] text-muted-foreground">Face avant *</p>
+                    </div>
+                  )}
+                  <input
+                    id="image-input-1"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange(1)}   
                   />
-                ) : (
-                  <div className="py-4">
-                    <ImagePlus className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Cliquez pour ajouter une image
-                    </p>
-                  </div>
-                )}
-                <input
-                  id="image-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
+                
+            
+              </div>
+              <div
+                  className="border-2 border-dashed border-border rounded-xl p-2 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+                  onClick={() => document.getElementById("image-input-2")?.click()}
+                >
+                  {imagePreview2 ? (
+                    <>
+                      <img
+                        src={imagePreview2}
+                        alt="Face arrière"
+                        className="w-full h-28 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeImage(2); }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      <p className="text-[10px] text-muted-foreground mt-1">Face arrière</p>
+                    </>
+                  ) : (
+                    <div className="py-4">
+                      <ImagePlus className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
+                      <p className="text-[10px] text-muted-foreground">Face arrière</p>
+                    </div>
+                  )}
+                  <input
+                    id="image-input-2"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange(2)}
+                  />
+                </div>
               </div>
             </div>
+            
 
             <FormField
               control={form.control}
@@ -248,7 +326,6 @@ export const AddProductDialog = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="description"

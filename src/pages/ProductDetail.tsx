@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,9 +8,8 @@ import { useCart } from "@/contexts/CartContext";
 import { useProduct } from "@/hooks/useProducts";
 import { useFavorites, useToggleFavorite } from "@/hooks/useFavorites";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCreateOrder } from "@/hooks/useOrders";
-import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -18,8 +18,7 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(id || "");
   const { data: favorites = [] } = useFavorites(user?.id);
   const toggleFavorite = useToggleFavorite();
-  const createOrder = useCreateOrder();
-  const [isDirectOrdering, setIsDirectOrdering] = useState(false);
+  const [currentImage, setCurrentImage] = useState(0);
 
   const isFavorite = favorites.some(f => f.product_id === id);
 
@@ -58,6 +57,12 @@ const ProductDetail = () => {
         </div>
       </Layout>
     );
+  }
+
+  // Build images array
+  const images = [product.image_url || "/placeholder.svg"];
+  if (product.image_url_2) {
+    images.push(product.image_url_2);
   }
 
   const formatPrice = (price: number) => {
@@ -99,50 +104,35 @@ const ProductDetail = () => {
     toggleFavorite.mutate({ userId: user.id, productId: product.id, isFavorite });
   };
 
+
   const handleDirectOrder = async () => {
     if (!product.vendor?.phone) {
       toast.error("Numéro du vendeur non disponible");
       return;
     }
 
-    if (!user) {
-      toast.error("Connectez-vous pour commander");
-      return;
-    }
-
-    if (!product.is_available || product.stock <= 0) {
-      toast.error("Ce produit est épuisé");
-      return;
-    }
-
-    setIsDirectOrdering(true);
     try {
-      // Create order in database
-      await createOrder.mutateAsync({
-        clientId: user.id,
-        vendorId: product.vendor_id,
-        totalAmount: product.price,
-        items: [{
-          productId: product.id,
-          quantity: 1,
-          unitPrice: product.price,
-        }],
+      const { data, error } = await supabase.rpc('create_whatsapp_order', {
+        p_vendor_id: product.vendor_id,
+        p_total_amount: product.price,
+        p_message: `Commande directe via WhatsApp - Produit: ${product.name}`,
+        p_product_id: product.id,
+        p_unit_price: product.price,
+        p_client_id: user?.id || null,
       });
 
-      // Then open WhatsApp
-      const message = encodeURIComponent(
-        `Bonjour ${product.vendor.shop_name}, je viens de passer commande pour votre produit "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce.`
-      );
-      window.open(`https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`, "_blank");
-      
-      toast.success("Commande enregistrée avec succès !");
+      if (error) {
+        console.error("Erreur commande:", error);
+      }
     } catch (error) {
-      // Error handled by mutation
-    } finally {
-      setIsDirectOrdering(false);
+      console.error("Erreur complète:", error);
     }
-  };
 
+    const message = encodeURIComponent(
+      `Bonjour ${product.vendor.shop_name}, je suis intéressé(e) par votre produit "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce.`
+    );
+    window.open(`https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`, "_blank");
+  };
   return (
     <Layout>
       <div className="container py-8">
@@ -156,15 +146,50 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Image */}
+          {/* Image Gallery */}
           <div className="relative">
-            <div className="aspect-square rounded-3xl overflow-hidden bg-secondary">
+            <div className="aspect-square rounded-3xl overflow-hidden bg-secondary relative">
               <img
-                src={product.image_url || "/placeholder.svg"}
+                src={images[currentImage]}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
+              
+              {/* Navigation arrows */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentImage(prev => prev === 0 ? images.length - 1 : prev - 1)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card/80 backdrop-blur-sm text-foreground hover:bg-card transition-colors shadow-md"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentImage(prev => prev === images.length - 1 ? 0 : prev + 1)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-card/80 backdrop-blur-sm text-foreground hover:bg-card transition-colors shadow-md"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
             </div>
+            
+            {/* Thumbnails */}
+            {images.length > 1 && (
+              <div className="flex gap-3 mt-3">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImage(idx)}
+                    className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-colors ${
+                      currentImage === idx ? "border-primary" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <img src={img} alt={`Vue ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
             
             {/* Status badges */}
             <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -240,15 +265,10 @@ const ProductDetail = () => {
                 size="lg"
                 variant="outline"
                 onClick={handleDirectOrder}
-                disabled={isDirectOrdering || !product.is_available || product.stock <= 0}
                 className="flex-1 gap-2"
               >
-                {isDirectOrdering ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <MessageCircle className="h-5 w-5" />
-                )}
-                {isDirectOrdering ? "Enregistrement..." : "Commander directement"}
+                <MessageCircle className="h-5 w-5" />
+                Commander directement
               </Button>
             </div>
 
@@ -257,7 +277,7 @@ const ProductDetail = () => {
               <div className="mt-8 p-6 rounded-2xl bg-secondary/50 border border-border">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {product.vendor.shop_name.charAt(0)}
+                    {product.vendor.shop_name?.charAt(0)}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">

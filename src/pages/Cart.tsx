@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag, MessageCircle, Send, Loader2 } from "lucide-react";
+import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag, Send, Loader2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
