@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,12 @@ const ProductDetail = () => {
   const { data: favorites = [] } = useFavorites(user?.id);
   const toggleFavorite = useToggleFavorite();
   const [currentImage, setCurrentImage] = useState(0);
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [orderForm, setOrderForm] = useState({
+  name: "",
+  phone: "",
+});
+const [orderLoading, setOrderLoading] = useState(false);
 
   const isFavorite = favorites.some(f => f.product_id === id);
 
@@ -109,32 +115,45 @@ const ProductDetail = () => {
 
 
   const handleDirectOrder = async () => {
+    if (!orderForm.name.trim() || !orderForm.phone.trim()) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
     if (!product.vendor?.phone) {
       toast.error("Numéro du vendeur non disponible");
       return;
     }
 
+    setOrderLoading(true);
+
     try {
-      const { data, error } = await supabase.rpc('create_whatsapp_order', {
+      const { error } = await supabase.rpc('create_whatsapp_order', {
         p_vendor_id: product.vendor_id,
         p_total_amount: product.price,
-        p_message: `Commande directe via WhatsApp - Produit: ${product.name}`,
+        p_message: `Commande directe via WhatsApp - Produit: ${product.name} - Client: ${orderForm.name} - Tél: ${orderForm.phone}`,
         p_product_id: product.id,
         p_unit_price: product.price,
         p_client_id: user?.id || null,
       });
 
-      if (error) {
-        console.error("Erreur commande:", error);
-      }
+      if (error) console.error("Erreur commande:", error);
     } catch (error) {
-      console.error("Erreur complète:", error);
+      console.error("Erreur:", error);
     }
 
+    // Ouvre WhatsApp avec les infos du client
     const message = encodeURIComponent(
-      `Bonjour ${product.vendor.shop_name}, je suis intéressé(e) par votre produit "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce.`
+      `Bonjour ${product.vendor.shop_name} 👋\n\nJe suis *${orderForm.name}* et je suis intéressé(e) par votre produit :\n\n📦 *${product.name}*\n💰 ${formatPrice(product.price)}\n📞 Mon numéro : ${orderForm.phone}\n\n_(Via UAM Commerce)_`
     );
-    window.open(`https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`, "_blank");
+
+    setOrderLoading(false);
+    setShowOrderForm(false);
+    setOrderForm({ name: "", phone: "" });
+
+    window.open(
+      `https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`,
+      "_blank"
+    );
   };
   return (
     <Layout>
@@ -267,7 +286,7 @@ const ProductDetail = () => {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={handleDirectOrder}
+                onClick={() => setShowOrderForm(true)}
                 className="flex-1 gap-2"
               >
                 <MessageCircle className="h-5 w-5" />
@@ -325,6 +344,72 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+      {/* Dialog commande directe */}
+      {showOrderForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-bold text-foreground mb-1">
+              Commander via WhatsApp
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Entrez vos informations pour contacter le vendeur
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  Prénom et Nom <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={orderForm.name}
+                  onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}
+                  placeholder="Ex: Amadou Diallo"
+                  className="w-full h-11 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">
+                  Numéro de téléphone <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={orderForm.phone}
+                  onChange={(e) => setOrderForm({ ...orderForm, phone: e.target.value })}
+                  placeholder="+221 77 123 45 67"
+                  className="w-full h-11 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowOrderForm(false);
+                  setOrderForm({ name: "", phone: "" });
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                disabled={orderLoading || !orderForm.name || !orderForm.phone}
+                onClick={handleDirectOrder}
+              >
+                {orderLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageCircle className="h-5 w-5" />
+                )}
+                Envoyer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
