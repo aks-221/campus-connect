@@ -60,10 +60,13 @@ const ProductDetail = () => {
   }
 
   // Build images array
-  const images = [product.image_url || "/placeholder.svg"];
-  if (product.image_url_2) {
-    images.push(product.image_url_2);
-  }
+  const images = [
+    product.image_url || "/placeholder.svg",
+    product.image_url_2,
+    product.image_url_3,
+    product.image_url_4,
+    product.image_url_5,
+  ].filter(Boolean) as string[];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("fr-FR").format(price) + " FCFA";

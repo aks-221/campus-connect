@@ -64,6 +64,9 @@ export interface Product {
   price: number;
   image_url: string | null;
   image_url_2: string | null;
+  image_url_3: string | null;
+  image_url_4: string | null;
+  image_url_5: string | null;
   stock: number;
   is_available: boolean;
   created_at: string;

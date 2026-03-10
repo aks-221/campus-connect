@@ -3,28 +3,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
@@ -42,6 +30,8 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
+const IMAGE_LABELS = ["Vue 1 *", "Vue 2", "Vue 3", "Vue 4", "Vue 5"];
+
 interface AddProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,23 +45,15 @@ interface AddProductDialogProps {
     category_id?: string | null;
     image_url?: string | null;
     image_url_2?: string | null;
+    image_url_3?: string | null;
+    image_url_4?: string | null;
+    image_url_5?: string | null;
   } | null;
 }
 
-export const AddProductDialog = ({
-  open,
-  onOpenChange,
-  vendorId,
-  editProduct,
-}: AddProductDialogProps) => {
-  const [imageFile1, setImageFile1] = useState<File | null>(null);
-  const [imageFile2, setImageFile2] = useState<File | null>(null);
-  const [imagePreview1, setImagePreview1] = useState<string | null>(
-    editProduct?.image_url || null
-  );
-  const [imagePreview2, setImagePreview2] = useState<string | null>(
-    editProduct?.image_url_2 || null
-  );
+export const AddProductDialog = ({ open, onOpenChange, vendorId, editProduct }: AddProductDialogProps) => {
+  const [imageFiles, setImageFiles] = useState<(File | null)[]>([null, null, null, null, null]);
+  const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null, null, null, null]);
   const [uploading, setUploading] = useState(false);
 
   const { data: categories } = useCategories();
@@ -80,16 +62,9 @@ export const AddProductDialog = ({
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      price: 0,
-      stock: 0,
-      category_id: undefined,
-    },
+    defaultValues: { name: "", description: "", price: 0, stock: 0, category_id: undefined },
   });
 
-  // Update form when editProduct changes
   useEffect(() => {
     if (editProduct) {
       form.reset({
@@ -99,120 +74,103 @@ export const AddProductDialog = ({
         stock: editProduct.stock || 0,
         category_id: editProduct.category_id || undefined,
       });
-      setImagePreview1(editProduct.image_url || null);
-      setImagePreview2(editProduct.image_url_2 || null);
-      setImageFile1(null);
-      setImageFile2(null);
+      setImagePreviews([
+        editProduct.image_url || null,
+        editProduct.image_url_2 || null,
+        editProduct.image_url_3 || null,
+        editProduct.image_url_4 || null,
+        editProduct.image_url_5 || null,
+      ]);
+      setImageFiles([null, null, null, null, null]);
     } else {
-      form.reset({
-        name: "",
-        description: "",
-        price: 0,
-        stock: 0,
-        category_id: undefined,
-      });
-      setImagePreview1(null);
-      setImagePreview2(null);
-      setImageFile1(null);
-      setImageFile2(null);
+      form.reset({ name: "", description: "", price: 0, stock: 0, category_id: undefined });
+      setImagePreviews([null, null, null, null, null]);
+      setImageFiles([null, null, null, null, null]);
     }
-  }, [editProduct, form]);
+  }, [editProduct, open]);
 
-  const handleImageChange = (index: 1 | 2) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const setter = index === 1 ? setImageFile1 : setImageFile2;
-      const previewSetter = index === 1 ? setImagePreview1 : setImagePreview2;
-      setter(file);
+      const newFiles = [...imageFiles];
+      const newPreviews = [...imagePreviews];
+      newFiles[index] = file;
       const reader = new FileReader();
-      reader.onloadend = () => previewSetter(reader.result as string);
+      reader.onloadend = () => {
+        newPreviews[index] = reader.result as string;
+        setImagePreviews([...newPreviews]);
+      };
       reader.readAsDataURL(file);
-      reader.readAsDataURL(file);
+      setImageFiles([...newFiles]);
     }
   };
-  const removeImage = (index: 1 | 2) => {
-    if (index === 1) {
-      setImageFile1(null);
-      setImagePreview1(null);
-    } else {
-      setImageFile2(null);
-      setImagePreview2(null);
-    }
+
+  const removeImage = (index: number) => {
+    const newFiles = [...imageFiles];
+    const newPreviews = [...imagePreviews];
+    newFiles[index] = null;
+    newPreviews[index] = null;
+    setImageFiles(newFiles);
+    setImagePreviews(newPreviews);
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split(".").pop();
     const fileName = `${vendorId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("product-images")
-      .upload(fileName, file);
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      toast.error("Erreur lors de l'upload de l'image");
-      return null;
-    }
-
-    const { data } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
+    const { error } = await supabase.storage.from("product-images").upload(fileName, file);
+    if (error) { toast.error("Erreur upload image"); return null; }
+    return supabase.storage.from("product-images").getPublicUrl(fileName).data.publicUrl;
   };
 
   const onSubmit = async (data: ProductFormData) => {
-    // Require image for new products
-    if (!editProduct && !imageFile1) {
-      toast.error("Veuillez ajouter au moins une image pour le produit");
-      return
+    if (!editProduct && !imageFiles[0] && !imagePreviews[0]) {
+      toast.error("Veuillez ajouter au moins une image");
+      return;
     }
-
     setUploading(true);
-
     try {
-      let imageUrl1 = editProduct?.image_url || null;
-      let imageUrl2 = editProduct?.image_url_2 || null;
-      if (imageFile1) {
-        imageUrl1 = await uploadImage(imageFile1);
+      // Calcule les URLs pour chaque image
+      const urls: (string | null)[] = [];
+      const existingUrls = [
+        editProduct?.image_url || null,
+        editProduct?.image_url_2 || null,
+        editProduct?.image_url_3 || null,
+        editProduct?.image_url_4 || null,
+        editProduct?.image_url_5 || null,
+      ];
+
+      for (let i = 0; i < 5; i++) {
+        if (imageFiles[i]) {
+          urls.push(await uploadImage(imageFiles[i]!));
+        } else if (imagePreviews[i]) {
+          urls.push(existingUrls[i]); // garde l'ancienne URL
+        } else {
+          urls.push(null); // image supprimée
+        }
       }
-      if (imageFile2) {
-        imageUrl2 = await uploadImage(imageFile2);
-      }
-      // If image 2 was removed (no file and no preview)
-      if (!imagePreview2 && !imageFile2) {
-        imageUrl2 = null;
-      }
+
+      const payload = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        stock: data.stock,
+        category_id: data.category_id || null,
+        image_url: urls[0],
+        image_url_2: urls[1],
+        image_url_3: urls[2],
+        image_url_4: urls[3],
+        image_url_5: urls[4],
+      };
 
       if (editProduct) {
-        await updateProduct.mutateAsync({
-          id: editProduct.id,
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          stock: data.stock,
-          category_id: data.category_id || null,
-          image_url: imageUrl1,
-          image_url_2: imageUrl2,
-        });
+        await updateProduct.mutateAsync({ id: editProduct.id, ...payload });
       } else {
-        await createProduct.mutateAsync({
-          vendor_id: vendorId,
-          name: data.name,
-          description: data.description,
-          price: data.price,
-          stock: data.stock,
-          category_id: data.category_id,
-          image_url: imageUrl1 || undefined,
-          image_url_2: imageUrl2 || undefined,
-        });
+        await createProduct.mutateAsync({ vendor_id: vendorId, ...payload });
       }
 
       form.reset();
-      setImageFile1(null);
-      setImageFile2(null);
-      setImagePreview1(null);
-      setImagePreview2(null);
+      setImageFiles([null, null, null, null, null]);
+      setImagePreviews([null, null, null, null, null]);
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving product:", error);
@@ -227,185 +185,120 @@ export const AddProductDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {editProduct ? "Modifier le produit" : "Ajouter un produit"}
-          </DialogTitle>
+          <DialogTitle>{editProduct ? "Modifier le produit" : "Ajouter un produit"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Image Upload */}
+            {/* Images */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Images du produit (1-2)</label>
-              <div className="grid grid-cols-2 gap-3">
-                {/* Image 1 */}
-                <div
-                  className="border-2 border-dashed border-border rounded-xl p-2 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
-                  onClick={() => document.getElementById("image-input-1")?.click()}
-                >
-                  {imagePreview1 ? (
-                    <>
-                      <img
-                        src={imagePreview1}
-                        alt="Face avant"
-                        className="w-full h-28 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeImage(1); }}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                      <p className="text-[10px] text-muted-foreground mt-1">Face avant</p>
-                    </>
-                  ) : (
-                    <div className="py-4">
-                      <ImagePlus className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
-                      <p className="text-[10px] text-muted-foreground">Face avant *</p>
-                    </div>
-                  )}
-                  <input
-                    id="image-input-1"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange(1)}   
-                  />
-                
-            
-              </div>
-              <div
-                  className="border-2 border-dashed border-border rounded-xl p-2 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
-                  onClick={() => document.getElementById("image-input-2")?.click()}
-                >
-                  {imagePreview2 ? (
-                    <>
-                      <img
-                        src={imagePreview2}
-                        alt="Face arrière"
-                        className="w-full h-28 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeImage(2); }}
-                        className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                      <p className="text-[10px] text-muted-foreground mt-1">Face arrière</p>
-                    </>
-                  ) : (
-                    <div className="py-4">
-                      <ImagePlus className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
-                      <p className="text-[10px] text-muted-foreground">Face arrière</p>
-                    </div>
-                  )}
-                  <input
-                    id="image-input-2"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange(2)}
-                  />
-                </div>
-              </div>
-            </div>
-            
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom du produit</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Ventilateur" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Décrivez votre produit..."
-                      className="resize-none"
-                      {...field}
+              <label className="text-sm font-medium">Images du produit (1-5)</label>
+              <p className="text-xs text-muted-foreground bg-secondary/50 rounded-lg px-3 py-2">
+                💡 Vous pouvez ajouter jusqu'à <strong>5 photos</strong> — profitez-en pour montrer le produit sous différents angles (face avant, arrière, détails...)
+              </p>
+              {/* Mobile : scroll horizontal / Desktop : grille */}
+              <div className="flex gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
+                {[0, 1, 2, 3, 4].map((index) => (
+                  <div
+                    key={index}
+                    className="flex-shrink-0 w-24 sm:w-auto border-2 border-dashed border-border rounded-xl p-2 text-center cursor-pointer hover:border-primary/50 transition-colors relative"
+                    onClick={() => document.getElementById(`image-input-${index}`)?.click()}
+                  >
+                    {imagePreviews[index] ? (
+                      <>
+                        <img
+                          src={imagePreviews[index]!}
+                          alt={IMAGE_LABELS[index]}
+                          className="w-full h-20 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                          className="absolute top-1 right-1 p-0.5 rounded-full bg-destructive text-destructive-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <p className="text-[9px] text-muted-foreground mt-1">
+                          {IMAGE_LABELS[index].replace(" *", "")}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="py-3">
+                        <ImagePlus className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                        <p className="text-[9px] text-muted-foreground">{IMAGE_LABELS[index]}</p>
+                      </div>
+                    )}
+                    <input
+                      id={`image-input-${index}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageChange(index)}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Indicateur scroll sur mobile */}
+              <p className="text-[10px] text-muted-foreground sm:hidden text-center">
+                ← Glissez pour voir plus →
+              </p>
+            </div>
+
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nom du produit</FormLabel>
+                <FormControl><Input placeholder="Ex: Ventilateur" {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Décrivez votre produit..." className="resize-none" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prix (FCFA)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="1000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="stock"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stock</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="10" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
+              <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Catégorie</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories?.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Prix (FCFA)</FormLabel>
+                  <FormControl><Input type="number" placeholder="1000" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
+              )} />
+              <FormField control={form.control} name="stock" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Stock</FormLabel>
+                  <FormControl><Input type="number" placeholder="10" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <FormField control={form.control} name="category_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Catégorie</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {categories?.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
               <Button type="submit" className="flex-1" disabled={isLoading}>
