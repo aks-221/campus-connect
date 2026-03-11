@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, ShoppingCart, BadgeCheck, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, Loader2, Share2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -102,6 +102,27 @@ const [orderLoading, setOrderLoading] = useState(false);
       toast.success("Produit ajouté au panier");
     } else {
       toast.error("Vous ne pouvez commander qu'auprès d'un seul vendeur à la fois. Videz votre panier pour commander auprès d'un autre vendeur.");
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    
+    if (navigator.share) {
+      // Mobile natif (iOS/Android)
+      try {
+        await navigator.share({
+          title: product.name,
+          text: `Découvre "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce 🛒`,
+          url,
+        });
+      } catch (error) {
+        // Annulé par l'utilisateur
+      }
+    } else {
+      // Desktop : copie le lien
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copié dans le presse-papiers !");
     }
   };
 
@@ -236,6 +257,13 @@ const [orderLoading, setOrderLoading] = useState(false);
             >
               <Heart className={`h-5 w-5 ${isFavorite ? "fill-current" : ""}`} />
             </button>
+            {/* Share button */}
+            <button
+              onClick={handleShare}
+              className="absolute top-4 right-16 p-3 rounded-full bg-card/80 backdrop-blur-sm transition-colors shadow-md text-muted-foreground hover:text-primary"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Details */}
@@ -364,7 +392,7 @@ const [orderLoading, setOrderLoading] = useState(false);
                   type="text"
                   value={orderForm.name}
                   onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}
-                  placeholder="Ex: Amadou Diallo"
+                  placeholder="Ex: Cheikh Fall"
                   className="w-full h-11 px-4 rounded-xl bg-secondary border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
