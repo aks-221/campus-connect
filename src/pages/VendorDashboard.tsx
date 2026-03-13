@@ -395,18 +395,23 @@ const VendorDashboard = () => {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleAvailability(product.id, product.is_available ?? true)}
-                        disabled={updateProduct.isPending || isSubscriptionExpired}
-                      >
-                        {product.is_available ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleAvailability(product.id, product.is_available ?? true)}
+                          disabled={updateProduct.isPending || isSubscriptionExpired}
+                        >
+                          {product.is_available ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <span className="text-xs text-muted-foreground text-center">
+                          {product.is_available ? "Masquer" : "Afficher"}
+                        </span>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
