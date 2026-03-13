@@ -20,11 +20,12 @@ const ProductDetail = () => {
   const toggleFavorite = useToggleFavorite();
   const [currentImage, setCurrentImage] = useState(0);
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [shared, setShared] = useState(false);
   const [orderForm, setOrderForm] = useState({
   name: "",
   phone: "",
 });
-const [orderLoading, setOrderLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
 
   const isFavorite = favorites.some(f => f.product_id === id);
 
@@ -105,26 +106,24 @@ const [orderLoading, setOrderLoading] = useState(false);
     }
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    
-    if (navigator.share) {
-      // Mobile natif (iOS/Android)
-      try {
-        await navigator.share({
-          title: product.name,
-          text: `Découvre "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce 🛒`,
-          url,
-        });
-      } catch (error) {
-        // Annulé par l'utilisateur
-      }
-    } else {
-      // Desktop : copie le lien
-      await navigator.clipboard.writeText(url);
-      toast.success("Lien copié dans le presse-papiers !");
-    }
-  };
+ const handleShare = async () => {
+  const shareUrl = `${window.location.origin}/share/produit/${product.id}`;
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: product.name,
+        text: `Découvre "${product.name}" à ${formatPrice(product.price)} sur UAM Commerce 🛒`,
+        url: shareUrl,
+      });
+      setShared(true);
+    } catch (error) {}
+  } else {
+    await navigator.clipboard.writeText(shareUrl);
+    setShared(true);
+    toast.success("Lien copié !");
+  }
+};
 
   const handleToggleFavorite = () => {
     if (!user) {
