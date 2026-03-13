@@ -112,6 +112,8 @@ const AdminDashboard = () => {
       day: "numeric",
       month: "short",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
     }).format(new Date(date));
 
   const handleVerifyVendor = async (vendorId: string, verified: boolean) => {
@@ -210,14 +212,21 @@ const AdminDashboard = () => {
     }
   };
 
-  const filteredVendors = vendors.filter(
-    (v) =>
-      v.shop_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.phone.includes(searchQuery)
-  );
+  const filteredVendors = vendors
+    .filter(
+      (v) =>
+        v.shop_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.phone.includes(searchQuery) ||
+        v.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.pavilion.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.room.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.shop_name.localeCompare(b.shop_name, 'fr', { sensitivity: 'base' }));
 
   const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.vendor?.shop_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
@@ -504,7 +513,14 @@ const AdminDashboard = () => {
                 <>
                   {/* Mobile: cards */}
                   <div className="md:hidden space-y-3">
-                    {profiles.filter(p => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email?.toLowerCase().includes(searchQuery.toLowerCase())).map((profile) => (
+                    {profiles
+                      .filter(p => 
+                        p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        p.phone?.includes(searchQuery)
+                      )
+                      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr', { sensitivity: 'base' }))
+                      .map((profile) => (
                       <div key={profile.id} className="bg-card rounded-2xl border border-border p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
@@ -539,7 +555,14 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {profiles.filter(p => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email?.toLowerCase().includes(searchQuery.toLowerCase())).map((profile) => (
+                          {profiles
+                            .filter(p => 
+                              p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              p.phone?.includes(searchQuery)
+                            )
+                            .sort((a, b) => a.full_name.localeCompare(b.full_name, 'fr', { sensitivity: 'base' }))
+                            .map((profile) => (
                             <tr key={profile.id} className="border-t border-border">
                               <td className="p-4">
                                 <div className="flex items-center gap-3">
