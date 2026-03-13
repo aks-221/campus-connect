@@ -43,6 +43,9 @@ export default async function handler(req, res) {
   <meta property="og:title" content="${title}" />
   <meta property="og:description" content="${description}" />
   <meta property="og:image" content="${image}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:url" content="${productUrl}" />
   <meta property="og:type" content="product" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -52,6 +55,7 @@ export default async function handler(req, res) {
 </html>`;
 
     res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
     return res.send(html);
 
   } catch (error) {
