@@ -70,12 +70,7 @@ const Footer = () => {
               </li>
               <li>
                 <span className="text-sm text-muted-foreground">
-                  Abonnement : 1 000 FCFA/mois
-                </span>
-              </li>
-              <li>
-                <span className="text-sm text-primary font-medium">
-                  1er mois gratuit !
+                  vendez gratuitement
                 </span>
               </li>
             </ul>

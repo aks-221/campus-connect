@@ -61,7 +61,7 @@ const Index = () => {
               🎓 Université Amadou Mahtar Mbow
             </span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight">
-              Achetez & Vendez sur le Campus
+              Achetez & Vendez gratuitement sur le Campus
             </h1>
             <p className="text-lg md:text-xl opacity-90 mb-8 leading-relaxed">
               La plateforme met en relation, le paiement et la remise se font 
@@ -209,8 +209,8 @@ const Index = () => {
               Vendez vos produits sur le campus
             </h2>
             <p className="text-white/90 mb-6">
-              Inscrivez-vous comme vendeur et commencez à vendre vos produits 
-              aux autres étudiants. Abonnement à seulement 1 000 FCFA/mois.
+              Inscrivez-vous comme vendeur et commencez à vendre gratuitement vos produits 
+              aux autres étudiants.
             </p>
             <Link to="/inscription-vendeur">
               <Button size="lg" variant="secondary" className="font-semibold">

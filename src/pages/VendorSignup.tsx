@@ -71,11 +71,7 @@ const VendorSignup = () => {
           
           {/* Pricing */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8">
-            <div className="text-5xl font-bold mb-2">1 000 FCFA</div>
-            <p className="text-lg opacity-90">par mois</p>
-            <div className="mt-4 py-2 px-4 rounded-full bg-white/20 inline-block">
-              🎉 1er mois GRATUIT !
-            </div>
+            <div className="text-5xl font-bold mb-2">Gratuit</div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -117,19 +113,7 @@ const VendorSignup = () => {
             </div>
           </Link>
           {/* Mobile Pricing Banner - visible only on mobile */}
-          <div className="lg:hidden flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎉</span>
-              <div>
-                <p className="text-sm font-bold text-primary">1er mois GRATUIT !</p>
-                <p className="text-xs text-muted-foreground">puis 1 000 FCFA/mois</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">✅ Sans commission</p>
-              <p className="text-xs text-muted-foreground">📦 Produits illimités</p>
-            </div>
-          </div>
+          
           {/* Title */}
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">
             Devenir vendeur
@@ -270,7 +254,6 @@ const VendorSignup = () => {
             {/* Terms */}
             <p className="text-primary font-medium hover:underline">
               En vous inscrivant, vous acceptez nos conditions d'utilisation. 
-              L'abonnement est de 1 000 FCFA/mois après le 1er mois gratuit.
             </p>
 
             <Button type="submit" size="lg" className="w-full" disabled={loading}>

@@ -28,7 +28,7 @@ const Login = () => {
       } else if (isVendor) {
         navigate("/vendeur");
       } else {
-        navigate("/");
+        navigate("/produits");
       }
   }
   }, [user, isVendor, isAdmin, authLoading, dataLoading, navigate]);
