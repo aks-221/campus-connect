@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useVendorProducts, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
 import { useVendorOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
 import { AddProductDialog } from "@/components/vendor/AddProductDialog";
+import { ProfileEditForm } from "@/components/vendor/ProfileEditForm";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -549,57 +550,10 @@ const VendorDashboard = () => {
           <div className="max-w-xl">
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-lg font-semibold text-foreground mb-6">
-                Informations de retrait
+                Informations de la boutique
               </h2>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">
-                    Nom de la boutique
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={vendorProfile?.shop_name}
-                    readOnly
-                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 block">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    defaultValue={vendorProfile?.phone}
-                    readOnly
-                    className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-1.5 block">
-                      Pavillon
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={vendorProfile?.pavilion}
-                      readOnly
-                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-1.5 block">
-                      Chambre
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={vendorProfile?.room}
-                      readOnly
-                      className="w-full h-12 px-4 rounded-xl bg-secondary border-0 text-foreground"
-                    />
-                  </div>
-                </div>
-              </div>
+              <ProfileEditForm vendorProfile={vendorProfile} />
             </div>
 
             {/* Subscription */}
@@ -629,6 +583,7 @@ const VendorDashboard = () => {
             </div>
           </div>
         )}
+        
 
         {/* Abonnement Tab */}
         {activeTab === "abonnement" && (
