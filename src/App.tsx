@@ -7,6 +7,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VendorGuard } from "@/components/guards/VendorGuard";
 import { AdminGuard } from "@/components/guards/AdminGuard";
+import { VendorNotificationListener } from "@/components/VendorNotificationListener";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -42,6 +43,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <VendorNotificationListener />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/produits" element={<Products />} />
