@@ -43,7 +43,7 @@ async function registerPushSubscription(userId: string) {
     }
 
     const subscription = await registration.pushManager.subscribe({
-      userVisuallyRequired: true,
+      userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     } as any);
 
