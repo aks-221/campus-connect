@@ -171,14 +171,7 @@ const ProductDetail = () => {
     setOrderForm({ name: "", phone: "" });
 
     const waUrl = `https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`;
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true;
-    if (isStandalone) {
-      window.location.href = waUrl;
-    } else {
-      window.open(waUrl, "_blank");
-    }
+    window.location.href = waUrl;
 
   };
   return (
