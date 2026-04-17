@@ -170,10 +170,16 @@ const ProductDetail = () => {
     setShowOrderForm(false);
     setOrderForm({ name: "", phone: "" });
 
-    window.open(
-      `https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`,
-      "_blank"
-    );
+    const waUrl = `https://wa.me/${product.vendor.phone.replace(/\s+/g, "")}?text=${message}`;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    if (isStandalone) {
+      window.location.href = waUrl;
+    } else {
+      window.open(waUrl, "_blank");
+    }
+
   };
   return (
     <Layout>

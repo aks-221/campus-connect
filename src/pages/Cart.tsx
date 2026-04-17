@@ -53,13 +53,23 @@ const Cart = () => {
         `Bonjour ${vendor.vendorName},\n\nJe viens de passer commande sur UAM Commerce :\n${productList}\n\nTotal: ${formatPrice(totalPrice)}${message ? `\n\nMessage: ${message}` : ""}\n\nMerci !`
       );
 
-      if (vendor.vendorPhone) {
-        window.open(`https://wa.me/${vendor.vendorPhone.replace(/\s+/g, "")}?text=${whatsappMessage}`, "_blank");
-      }
-
       clearCart();
       setMessage("");
       toast.success("Commande envoyée avec succès !");
+      if (vendor.vendorPhone) {
+        const waUrl = `https://wa.me/${vendor.vendorPhone.replace(/\s+/g, "")}?text=${whatsappMessage}`;
+        // Detect PWA standalone mode
+        const isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          (window.navigator as any).standalone === true;
+        if (isStandalone) {
+          // In PWA: use location.href to open WhatsApp app via deep link
+          window.location.href = waUrl;
+          return;
+        } else {
+          window.open(waUrl, "_blank");
+        }
+      }
       navigate("/mes-commandes");
     } catch (error) {
       // Error handled by mutation
